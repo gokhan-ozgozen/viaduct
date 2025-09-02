@@ -6,6 +6,9 @@ This readme documents how to develop and deploy viaduct.airbnb.tech.
 
 This is a Hugo/Docsy site. See the [Docsy documentation](https://www.docsy.dev/docs/getting-started/) for more information.
 
+Ensure you have followed the [Docsy
+prerequisites](https://www.docsy.dev/docs/get-started/docsy-as-module/installation-prerequisites/).
+
 ### Customizations
 
 There are a few custom shortcodes in the `layouts/_shortcodes` directory:

@@ -195,13 +195,15 @@ menu:
 module:
   # Uncomment the next line to build and serve using local docsy clone declared in the named Hugo workspace:
   # workspace: docsy.work
+  proxy: direct
   hugoVersion:
     extended: true
     min: 0.146.0
+  imports:
+    - path: github.com/google/docsy
+      disable: false
 
 services:
   googleAnalytics:
     id: G-79P40SMGG8
 
-theme: docsy
-themesDir: node_modules
