@@ -7,12 +7,9 @@ import graphql.schema.DataFetcher
 import viaduct.engine.api.FieldCheckerDispatcherRegistry
 import viaduct.engine.api.FieldResolverDispatcher
 import viaduct.engine.api.FieldResolverDispatcherRegistry
-import viaduct.engine.api.FragmentLoader
 import viaduct.engine.api.coroutines.CoroutineInterop
 import viaduct.engine.runtime.execution.DefaultCoroutineInterop
 import viaduct.engine.runtime.execution.ResolverDataFetcher
-import viaduct.engine.runtime.execution.TenantNameResolver
-import viaduct.service.api.spi.FlagManager
 import viaduct.utils.graphql.asNamedElement
 
 /**
@@ -21,9 +18,6 @@ import viaduct.utils.graphql.asNamedElement
 class ResolverInstrumentation(
     private val dispatcherRegistry: FieldResolverDispatcherRegistry, // Modern resolvers
     private val checkerRegistry: FieldCheckerDispatcherRegistry,
-    private val fragmentLoader: FragmentLoader,
-    private val flagManager: FlagManager,
-    private val tenantNameResolver: TenantNameResolver,
     private val coroutineInterop: CoroutineInterop = DefaultCoroutineInterop
 ) : Instrumentation {
     override fun instrumentDataFetcher(
@@ -42,9 +36,6 @@ class ResolverInstrumentation(
             fieldName = fieldName,
             fieldResolverDispatcher = resolverDispatcher,
             checkerDispatcher = checkerDispatcher,
-            fragmentLoader = fragmentLoader,
-            flagManager = flagManager,
-            tenantNameResolver = tenantNameResolver,
             coroutineInterop = coroutineInterop
         )
     }

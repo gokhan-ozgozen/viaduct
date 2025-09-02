@@ -33,7 +33,7 @@ open class ViaductModernTestApplication(
     private val tenantPackageFinder: TenantPackageFinder,
     customSchemaRegistration: ((builder: ViaductSchemaRegistryBuilder) -> Unit)? = null
 ) {
-    private val flagManager = MockFlagManager(Flags.useModernExecutionStrategyFlags + Flags.EXECUTE_ACCESS_CHECKS_IN_MODERN_EXECUTION_STRATEGY)
+    private val flagManager = MockFlagManager.mk(Flags.EXECUTE_ACCESS_CHECKS_IN_MODERN_EXECUTION_STRATEGY)
 
     protected fun commonTenantPrefix() = tenantPackageFinder.tenantPackages().reduce { p, tenant -> p.commonPrefixWith(tenant) }
 

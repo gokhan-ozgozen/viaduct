@@ -16,14 +16,10 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import viaduct.engine.api.FieldCheckerDispatcherRegistry
 import viaduct.engine.api.FieldResolverDispatcherRegistry
-import viaduct.engine.api.FragmentLoader
-import viaduct.engine.runtime.execution.TenantNameResolver
-import viaduct.service.api.spi.mocks.MockFlagManager
 
 internal class ResolverInstrumentationTest {
     private val mockDispathcerRegistry: FieldResolverDispatcherRegistry = mockk()
     private val mockCheckerRegistry: FieldCheckerDispatcherRegistry = mockk()
-    private val mockFragmentLoader: FragmentLoader = mockk()
     private val mockSchema: GraphQLSchema = mockk()
     private lateinit var testClass: ResolverInstrumentation
     private val typeName = "typeName"
@@ -31,13 +27,10 @@ internal class ResolverInstrumentationTest {
 
     @BeforeEach
     fun setupMocks() {
-        clearMocks(mockDispathcerRegistry, mockCheckerRegistry, mockFragmentLoader, mockSchema)
+        clearMocks(mockDispathcerRegistry, mockCheckerRegistry, mockSchema)
         testClass = ResolverInstrumentation(
             dispatcherRegistry = mockDispathcerRegistry,
-            fragmentLoader = mockFragmentLoader,
             checkerRegistry = mockCheckerRegistry,
-            flagManager = MockFlagManager(),
-            tenantNameResolver = TenantNameResolver(),
         )
     }
 

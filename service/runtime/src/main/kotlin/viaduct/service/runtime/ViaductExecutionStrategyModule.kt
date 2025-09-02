@@ -23,7 +23,6 @@ import viaduct.engine.runtime.DispatcherRegistry
 import viaduct.engine.runtime.ViaductFragmentLoader
 import viaduct.engine.runtime.execution.AccessCheckRunner
 import viaduct.engine.runtime.execution.ExecutionParameters
-import viaduct.engine.runtime.execution.TenantNameResolver
 import viaduct.engine.runtime.execution.ViaductExecutionStrategy
 import viaduct.engine.runtime.execution.WrappedCoroutineExecutionStrategy
 import viaduct.engine.runtime.instrumentation.ResolverInstrumentation
@@ -49,7 +48,6 @@ class ViaductExecutionStrategyModule(
     val instrumentation: Instrumentation? = null,
     val tenantBootstrapper: TenantAPIBootstrapper,
     val fragmentLoader: FragmentLoader? = null,
-    val tenantNameResolver: TenantNameResolver,
     val config: Config
 ) : AbstractModule() {
     companion object {
@@ -181,16 +179,11 @@ class ViaductExecutionStrategyModule(
     @Singleton
     fun providesResolverInstrumentation(
         dispatcherRegistry: DispatcherRegistry,
-        fragmentLoader: FragmentLoader,
-        flagManager: FlagManager,
         coroutineInterop: CoroutineInterop
     ): ResolverInstrumentation {
         return ResolverInstrumentation(
             dispatcherRegistry,
             dispatcherRegistry,
-            fragmentLoader,
-            flagManager,
-            tenantNameResolver,
             coroutineInterop
         )
     }

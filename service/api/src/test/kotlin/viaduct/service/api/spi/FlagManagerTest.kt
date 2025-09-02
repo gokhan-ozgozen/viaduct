@@ -21,10 +21,6 @@ class FlagManagerTest {
 
     @Test
     fun `FlagManager_default returns true for select flags`() {
-        Flags.useModernExecutionStrategyFlags.forEach { flag ->
-            assertTrue(FlagManager.default.isEnabled(flag))
-        }
-        assertTrue(FlagManager.default.isEnabled(Flags.USE_MODERN_EXECUTION_STRATEGY_FOR_MODERN_FIELDS))
         assertTrue(FlagManager.default.isEnabled(Flags.EXECUTE_ACCESS_CHECKS_IN_MODERN_EXECUTION_STRATEGY))
     }
 }

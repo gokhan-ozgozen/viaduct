@@ -242,7 +242,6 @@ class StandardViaduct internal constructor(
                     instrumentation,
                     tenantBootstrapper,
                     fragmentLoader,
-                    tenantNameResolver,
                     executionStrategyModuleConfig
                 ),
                 internalEngineModule

@@ -11,7 +11,6 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.BeforeEach
 import viaduct.api.reflect.Type
 import viaduct.service.api.ExecutionInput
-import viaduct.service.api.spi.Flags
 import viaduct.service.api.spi.mocks.MockFlagManager
 import viaduct.service.runtime.StandardViaduct
 import viaduct.service.runtime.ViaductSchemaRegistryBuilder
@@ -67,7 +66,7 @@ abstract class FeatureAppTestBase {
     protected open var customScalars: List<GraphQLScalarType> = emptyList()
     private val injector: Injector by lazy { Guice.createInjector() }
     private val guiceTenantCodeInjector by lazy { GuiceTenantCodeInjector(injector) }
-    private val flagManager = MockFlagManager(Flags.useModernExecutionStrategyFlags)
+    private val flagManager = MockFlagManager()
     private val DEFAULT_SCOPE_ID = "public"
 
     // GlobalID codec for creating GlobalID strings in tests

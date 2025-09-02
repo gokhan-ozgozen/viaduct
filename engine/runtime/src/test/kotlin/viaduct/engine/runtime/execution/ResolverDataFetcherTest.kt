@@ -42,26 +42,15 @@ import viaduct.engine.runtime.getLocalContextForType
 import viaduct.engine.runtime.mkSchema
 import viaduct.engine.runtime.mocks.ContextMocks
 import viaduct.service.api.spi.FlagManager
-import viaduct.service.api.spi.Flags
 import viaduct.service.api.spi.mocks.MockFlagManager
 
 @ExperimentalCoroutinesApi
 class ResolverDataFetcherTest {
     private val allDisabledFlags = MockFlagManager()
-    private val modDisabledForModFieldsFlags = MockFlagManager(
-        Flags.useModernExecutionStrategyFlags - Flags.USE_MODERN_EXECUTION_STRATEGY_FOR_MODERN_FIELDS
-    )
     private val allEnabledFlags = MockFlagManager.Enabled
-    private val modEnabledButNotExecuteAccessChecksInModstrat = MockFlagManager(
-        Flags.useModernExecutionStrategyFlags +
-            Flags.USE_MODERN_EXECUTION_STRATEGY_FOR_MODERN_FIELDS -
-            Flags.EXECUTE_ACCESS_CHECKS_IN_MODERN_EXECUTION_STRATEGY
-    )
     private val allFlagSets = listOf(
         allDisabledFlags,
-        modDisabledForModFieldsFlags,
         allEnabledFlags,
-        modEnabledButNotExecuteAccessChecksInModstrat
     )
 
     private class Fixture(
@@ -96,12 +85,6 @@ class ResolverDataFetcherTest {
         var resolverRan = false
         val resolverId = "$testType.$testField"
         val objectValue = EngineObjectDataBuilder.from(testTypeObject).put(testField, expectedResult).build()
-        val selector = FieldResolverExecutor.Selector(
-            arguments = emptyMap(),
-            objectValue = objectValue,
-            queryValue = objectValue,
-            selections = null
-        )
         val checkerDispatcher = if (checkerExecutor == null) null else CheckerDispatcherImpl(checkerExecutor)
         val executor = if (resolveWithException) {
             TestFieldUnbatchedResolverExecutor(
@@ -119,15 +102,11 @@ class ResolverDataFetcherTest {
                 },
             )
         }
-        val fragmentLoader = MockFragmentLoader(ObjectEngineResultImpl.newForType(testTypeObject))
         val resolverDataFetcher = ResolverDataFetcher(
             typeName = testType,
             fieldName = testField,
             fieldResolverDispatcher = FieldResolverDispatcherImpl(executor),
             checkerDispatcher = checkerDispatcher,
-            fragmentLoader = fragmentLoader,
-            flagManager = flagManager,
-            tenantNameResolver = TenantNameResolver(),
         )
 
         val dataFetchingEnvironment: DataFetchingEnvironment = mockk()
@@ -229,7 +208,7 @@ class ResolverDataFetcherTest {
                         SelectionsParser.parse("TestType", "TestField"),
                         emptyList()
                     ),
-                    flagManager = modDisabledForModFieldsFlags
+                    flagManager = allDisabledFlags
                 ).apply {
                     val receivedResult = resolverDataFetcher.get(dataFetchingEnvironment).join()
                     assertEquals(expectedResult, receivedResult)
@@ -587,7 +566,7 @@ class ResolverDataFetcherTest {
                 Fixture(
                     expectedResult = "test fetched result",
                     requiredSelectionSet = null,
-                    flagManager = modEnabledButNotExecuteAccessChecksInModstrat,
+                    flagManager = allDisabledFlags,
                     checkerExecutor = MockCheckerExecutor(
                         executeFn = { _, _ -> }
                     )
@@ -605,7 +584,7 @@ class ResolverDataFetcherTest {
                 Fixture(
                     expectedResult = "test fetched result",
                     requiredSelectionSet = null,
-                    flagManager = modEnabledButNotExecuteAccessChecksInModstrat,
+                    flagManager = allDisabledFlags,
                     checkerExecutor = MockCheckerExecutor(
                         requiredSelectionSets = mapOf(
                             "key" to RequiredSelectionSet(
@@ -629,7 +608,7 @@ class ResolverDataFetcherTest {
                 Fixture(
                     expectedResult = "test fetched result",
                     requiredSelectionSet = null,
-                    flagManager = modEnabledButNotExecuteAccessChecksInModstrat,
+                    flagManager = allDisabledFlags,
                     checkerExecutor = MockCheckerExecutor(
                         requiredSelectionSets = mapOf(
                             "checker_0" to RequiredSelectionSet(
