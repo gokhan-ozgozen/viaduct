@@ -4,7 +4,7 @@
 HELP.md
 .gradle/
 build/
-out/
+out/ 
 !gradle/wrapper/gradle-wrapper.jar
 **/build/
 **/out/
