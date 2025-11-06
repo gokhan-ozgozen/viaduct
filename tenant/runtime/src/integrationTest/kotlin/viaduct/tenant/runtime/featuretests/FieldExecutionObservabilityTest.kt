@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import viaduct.api.context.FieldExecutionContext
 import viaduct.api.globalid.GlobalID
@@ -25,7 +24,7 @@ import viaduct.engine.api.instrumentation.ChainedModernGJInstrumentation
 import viaduct.engine.api.instrumentation.IViaductInstrumentation
 import viaduct.engine.api.instrumentation.ViaductInstrumentationBase
 import viaduct.engine.api.observability.ExecutionObservabilityContext
-import viaduct.engine.runtime.context.getLocalContextForType
+import viaduct.engine.runtime.getLocalContextForType
 import viaduct.tenant.runtime.featuretests.fixtures.Bar
 import viaduct.tenant.runtime.featuretests.fixtures.Baz
 import viaduct.tenant.runtime.featuretests.fixtures.FeatureTestBuilder
@@ -141,24 +140,10 @@ class FieldExecutionObservabilityTest {
     }
 
     @Test
-    @DisplayName("test same field is fetched multiple times")
-    fun testSameFieldFetchedMultipleTimes() {
+    fun `test same field is fetched multiple times`() {
         val instrumentation = TestObservabilityInstrumentation()
-        val childPlanExecuted = CountDownLatch(2)
 
-        // fieldExecute and fieldComplete run in parallel, which creates a race condition where fieldComplete
-        // may run before the child plan executes, potentially canceling the child plan.
-        // This instrumentation will ensure the child plans are executed, and resolvers can wait for child plan execution before returning values.
-        val countDownInstrumentation = createCountDownInstrumentation(
-            "Query" to "string1",
-            mapOf("OPERATION:testQuery" to childPlanExecuted)
-        )
-
-        val instrumentations = ChainedModernGJInstrumentation(
-            listOf(instrumentation.asStandardInstrumentation, countDownInstrumentation.asStandardInstrumentation)
-        )
-
-        FeatureTestBuilder(FeatureTestSchemaFixture.sdl, instrumentation = instrumentations)
+        FeatureTestBuilder(FeatureTestSchemaFixture.sdl, instrumentation = instrumentation.asStandardInstrumentation())
             .resolver("Query" to "idField", resolverName = "query-id-field-resolver") { ctx ->
                 // resolver returns a GRT value to the tenant runtime, which we expect to be unwrapped before
                 // it's handed over to the engine
@@ -173,15 +158,13 @@ class FieldExecutionObservabilityTest {
                     val idFieldValue = ctx.objectValue.get<GlobalID<Baz>>("idField")
                     assertEquals(Baz.Reflection, idFieldValue.type)
                     assertEquals("1", idFieldValue.internalID)
-                    // Wait until the child plan is executed before returning values. Otherwise, the child plan may be cancelled.
-                    // Wait for 1s as a safeguard to indefinite waiting.
-                    childPlanExecuted.await(1, TimeUnit.SECONDS).toString()
+                    idFieldValue.internalID
                 },
                 resolverName = "query-string1-resolver"
             )
             .build()
             .execute("query testQuery {first: string1, second: string1}")
-            .assertJson("{data: {first: \"true\", second: \"true\"}}")
+            .assertJson("{data: {first: \"1\", second: \"1\"}}")
 
         assertEquals(
             setOf(
@@ -194,8 +177,8 @@ class FieldExecutionObservabilityTest {
         assertTrue(instrumentation.getFieldRequiredBy("Query", "idField").toSet().contains("RESOLVER:query-string1-resolver")) {
             "Expected 'query-string1-resolver' to be in the required by set for 'idField'"
         }
-        assertTrue(instrumentation.getFieldRequiredBy("Query", "string1").size == 2) {
-            "Expected 'string1' to be required twice by first & second, but found: ${instrumentation.getFieldRequiredBy("Query", "string1")}"
+        assertTrue((instrumentation.getFieldRequiredBy("Query", "idField").size == 2)) {
+            "Expected 'idField' to be required by the resolver twice, but found: ${instrumentation.getFieldRequiredBy("Query", "idField")}"
         }
 
         // verify the beginFieldFetch instrumentation was called with the expected field coordinates and resolvedBy values
@@ -216,29 +199,11 @@ class FieldExecutionObservabilityTest {
     @Test
     fun `test a field is queried by both the operation and the resolver`() {
         val instrumentation = TestObservabilityInstrumentation()
-        val idFieldResolverChildPlanExecuted = CountDownLatch(1)
-        val string1ResolverChildPlanExecuted = CountDownLatch(1)
 
-        // fieldExecute and fieldComplete run in parallel, which creates a race condition where fieldComplete
-        // may run before the child plan executes, potentially canceling the child plan.
-        // This instrumentation will ensure the child plans are executed, and resolvers can wait for child plan execution before returning values.
-        val countDownInstrumentation = createCountDownInstrumentation(
-            "Query" to "idField",
-            mapOf(
-                "RESOLVER:query-string1-resolver" to string1ResolverChildPlanExecuted,
-                "OPERATION:testQuery" to idFieldResolverChildPlanExecuted
-            )
-        )
-
-        val instrumentations = ChainedModernGJInstrumentation(
-            listOf(instrumentation.asStandardInstrumentation, countDownInstrumentation.asStandardInstrumentation)
-        )
-
-        FeatureTestBuilder(FeatureTestSchemaFixture.sdl, instrumentation = instrumentations)
+        FeatureTestBuilder(FeatureTestSchemaFixture.sdl, instrumentation = instrumentation.asStandardInstrumentation())
             .resolver("Query" to "idField", resolverName = "query-id-field-resolver") { ctx ->
                 // resolver returns a GRT value to the tenant runtime, which we expect to be unwrapped before
                 // it's handed over to the engine
-                idFieldResolverChildPlanExecuted.await(1, TimeUnit.SECONDS)
                 ctx.globalIDFor(Baz.Reflection, "1")
             }
             .resolver(
@@ -250,15 +215,13 @@ class FieldExecutionObservabilityTest {
                     val idFieldValue = ctx.objectValue.get<GlobalID<Baz>>("idField")
                     assertEquals(Baz.Reflection, idFieldValue.type)
                     assertEquals("1", idFieldValue.internalID)
-                    // Wait until the child plan is executed before returning values. Otherwise, the child plan may be cancelled.
-                    // Wait for 1s as a safeguard to indefinite waiting.
-                    string1ResolverChildPlanExecuted.await(1, TimeUnit.SECONDS).toString()
+                    idFieldValue.internalID
                 },
                 resolverName = "query-string1-resolver"
             )
             .build()
             .execute("query testQuery {idField, string1}")
-            .assertJson("{data: {idField: \"QmF6OjE=\", string1: \"true\"}}")
+        // No need to verify the execution result.
 
         assertEquals(
             setOf(
@@ -292,17 +255,34 @@ class FieldExecutionObservabilityTest {
 
         // fieldExecute and fieldComplete run in parallel, which creates a race condition where fieldComplete
         // may run before the child plan executes, potentially canceling the child plan.
-        // This instrumentation will ensure the child plans are executed, and resolvers can wait for child plan execution before returning values.
-        val countDownInstrumentation = createCountDownInstrumentation(
-            "Query" to "idField",
-            mapOf(
-                "RESOLVER:query-string1-resolver" to queryString1ResolverChildPlanExecuted,
-                "RESOLVER:query-string2-resolver" to queryString2ResolverChildPlanExecuted
-            )
-        )
+        // This instrumentation verifies that each resolver's child plan is actually executed.
+        val requiredByCountInstrumentation = object :
+            ViaductInstrumentationBase(),
+            IViaductInstrumentation.WithBeginFieldExecution {
+            override fun beginFieldExecution(
+                parameters: InstrumentationFieldParameters,
+                state: InstrumentationState?
+            ): InstrumentationContext<Any>? {
+                val typeName = parameters.executionStepInfo.objectType.name
+                val fieldName = parameters.executionStepInfo.field.name
+
+                val attribution = parameters.executionContext.getLocalContextForType<ExecutionObservabilityContext>()?.attribution?.toTagString()
+                if (typeName == "Query" && fieldName == "idField") {
+                    if (attribution == "RESOLVER:query-string1-resolver") {
+                        queryString1ResolverChildPlanExecuted.countDown()
+                    } else if (attribution == "RESOLVER:query-string2-resolver") {
+                        queryString2ResolverChildPlanExecuted.countDown()
+                    }
+                }
+                return SimpleInstrumentationContext.noOp()
+            }
+        }
 
         val instrumentations = ChainedModernGJInstrumentation(
-            listOf(instrumentation.asStandardInstrumentation, countDownInstrumentation.asStandardInstrumentation)
+            listOf(
+                instrumentation.asStandardInstrumentation,
+                requiredByCountInstrumentation.asStandardInstrumentation
+            )
         )
 
         FeatureTestBuilder(FeatureTestSchemaFixture.sdl, instrumentation = instrumentations)
@@ -316,8 +296,6 @@ class FieldExecutionObservabilityTest {
                 objectValueFragment = "idField",
                 resolveFn = { ctx: UntypedFieldContext ->
                     val idFieldValue = ctx.objectValue.get<GlobalID<Baz>>("idField")
-                    // Wait until the child plan is executed before returning values. Otherwise, the child plan may be cancelled.
-                    // Wait for 1s as a safeguard to indefinite waiting.
                     queryString1ResolverChildPlanExecuted.await(1, TimeUnit.SECONDS).toString()
                 },
                 resolverName = "query-string1-resolver"
@@ -327,8 +305,6 @@ class FieldExecutionObservabilityTest {
                 objectValueFragment = "idField",
                 resolveFn = { ctx: UntypedFieldContext ->
                     val idFieldValue = ctx.objectValue.get<GlobalID<Baz>>("idField")
-                    // Wait until the child plan is executed before returning values. Otherwise, the child plan may be cancelled.
-                    // Wait for 1s as a safeguard to indefinite waiting.
                     queryString2ResolverChildPlanExecuted.await(1, TimeUnit.SECONDS).toString()
                 },
                 resolverName = "query-string2-resolver"
@@ -548,26 +524,6 @@ class FieldExecutionObservabilityTest {
         assertEquals("query-foo-resolver", resolvedByInstrumentation.getFieldResolvedBy("Foo", "valueWithoutResolver"))
         assertEquals("foo-bar-resolver", resolvedByInstrumentation.getFieldResolvedBy("Foo", "bar"))
         assertEquals("bar-value-resolver", resolvedByInstrumentation.getFieldResolvedBy("Bar", "value"))
-    }
-
-    private fun createCountDownInstrumentation(
-        coordinate: Coordinate,
-        attributionToLatchMap: Map<String?, CountDownLatch>
-    ): ViaductInstrumentationBase {
-        return object : ViaductInstrumentationBase(), IViaductInstrumentation.WithBeginFieldExecution {
-            override fun beginFieldExecution(
-                parameters: InstrumentationFieldParameters,
-                state: InstrumentationState?
-            ): InstrumentationContext<Any>? {
-                val typeName = parameters.executionStepInfo.objectType.name
-                val fieldName = parameters.executionStepInfo.field.name
-                if (coordinate == (typeName to fieldName)) {
-                    val attribution = parameters.executionContext.getLocalContextForType<ExecutionObservabilityContext>()?.attribution?.toTagString()
-                    attributionToLatchMap[attribution]?.countDown()
-                }
-                return SimpleInstrumentationContext.noOp()
-            }
-        }
     }
 
     class TestObservabilityInstrumentation :

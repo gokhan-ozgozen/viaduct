@@ -29,8 +29,8 @@ class ChainedModernGJInstrumentationTest {
         val parameters = mockk<InstrumentationExecutionStrategyParameters>()
         val state1 = object : InstrumentationState {}
         val state2 = object : InstrumentationState {}
-        val context1 = mockk<InstrumentationContext<Unit>>()
-        val context2 = mockk<InstrumentationContext<Unit>>()
+        val context1 = mockk<InstrumentationContext<Map<String, Any?>>>()
+        val context2 = mockk<InstrumentationContext<Map<String, Any?>>>()
 
         val instr1 = mockk<ViaductModernGJInstrumentation> {
             every { createStateAsync(any()) } returns CompletableFuture.completedFuture(state1)

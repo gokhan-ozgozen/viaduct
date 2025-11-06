@@ -4,7 +4,7 @@
 ![Gradle Plugin Portal Version](https://img.shields.io/gradle-plugin-portal/v/com.airbnb.viaduct.application-gradle-plugin)
 
 <p align="center">
-  <a href="https://viaduct.airbnb.tech/">
+  <a href="https://airbnb.io/viaduct">
     <img src=".github/viaduct_logo.jpg" alt="Viaduct logo" width="200">
   </a>
 </p>
@@ -12,12 +12,12 @@
     <b>Viaduct is a GraphQL-based system that provides a unified interface for accessing and interacting with any data source.</b>
 </p>
 <p align="center">
-    See the <a href="https://viaduct.airbnb.tech/docs/">User Manual</a> for deployment instructions and end user documentation.
+    See the <a href="https://airbnb.io/viaduct/docs/">User Manual</a> for deployment instructions and end user documentation.
 </p>
 
 
 > [!WARNING]
-> The Viaduct engine is in production, at scale, at Airbnb where it has proven reliable. The developer API of Viaduct is under active development. In [our roadmap](https://viaduct.airbnb.tech/roadmap) we indicate which parts of the API are more or less subject to future change.  This is a good time to join the project and influence the direction that this API takes!
+> The Viaduct engine is in production, at scale, at Airbnb where it has proven reliable. The developer API of Viaduct is under active development. In [our roadmap](https://airbnb.io/viaduct/roadmap) we indicate which parts of the API are more or less subject to future change.  This is a good time to join the project and influence the direction that this API takes!
 
 # Vision
 
@@ -54,7 +54,7 @@ and you should see:
 }
 ```
 
-To continue on from here, see our [Getting Started](https://viaduct.airbnb.tech/docs/getting_started/) guide.
+To continue on from here, see our [Getting Started](https://airbnb.io/viaduct/docs/getting_started/) guide.
 
 ## Contributing
 

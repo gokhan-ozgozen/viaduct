@@ -40,7 +40,7 @@ publishing {
             pom {
                 name.set("Viaduct Tools")
                 description.set("A GraphQL-based microservice alternative.")
-                url.set("https://viaduct.airbnb.tech/")
+                url.set("https://airbnb.io/viaduct/")
                 licenses {
                     license {
                         name.set("Apache License, Version 2.0")
@@ -71,15 +71,11 @@ signing {
     val signingKeyId: String? by project
     val signingKey: String? by project
     val signingPassword: String? by project
-
-    // Only configure signing if credentials are present
-    if (signingKeyId != null && signingKey != null && signingPassword != null) {
-        useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
-        sign(publishing.publications["mavenJava"])
+    useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+    setRequired {
+        gradle.taskGraph.allTasks.any { it is PublishToMavenRepository }
     }
-
-    // Signing is optional - only required when publishing to remote repositories with credentials
-    isRequired = false
+    sign(publishing.publications["mavenJava"])
 }
 
 // Apply copybara tasks from separate script

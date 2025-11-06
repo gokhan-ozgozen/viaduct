@@ -40,7 +40,7 @@ class OptimizedChainedInstrumentationTest {
         override fun beginFetchObject(
             parameters: InstrumentationExecutionStrategyParameters,
             state: InstrumentationState?
-        ): InstrumentationContext<Unit> {
+        ): InstrumentationContext<Map<String, Any?>>? {
             called = true
             return noOp()
         }
@@ -68,7 +68,7 @@ class OptimizedChainedInstrumentationTest {
         override fun beginCompleteObject(
             parameters: InstrumentationExecutionStrategyParameters,
             state: InstrumentationState?
-        ): InstrumentationContext<Any> {
+        ): InstrumentationContext<Any>? {
             called = true
             return noOp()
         }

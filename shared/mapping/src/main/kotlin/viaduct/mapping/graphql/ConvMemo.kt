@@ -55,8 +55,6 @@ class ConvMemo {
 
         override fun invoke(from: Any?): Any? = checkState().invoke(from)
 
-        override fun invert(to: Any?): Any? = checkState().invert(to)
-
         override fun inverse(): Conv<Any?, Any?> = checkState().inverse()
 
         private fun checkState(): Conv<Any?, Any?> =

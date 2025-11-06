@@ -5,16 +5,11 @@ package viaduct.deferred
 
 import java.util.concurrent.CompletionStage
 import java.util.concurrent.ExecutionException
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CompletionHandlerException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.InternalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 
 /**
@@ -64,9 +59,8 @@ fun <T : Any?> handle(
         } else {
             handler(result, null)
         }
-    } catch (ex: Exception) {
-        ex.maybeRethrowCompletionHandlerException()
-        handler(null, ex)
+    } catch (e: Throwable) {
+        handler(null, e)
     }
 }
 
@@ -75,7 +69,7 @@ fun <T> Result<T>.toDeferred(): Deferred<T> {
     if (this.isSuccess) {
         d.complete(this.getOrThrow())
     } else {
-        d.propagateUpstreamFailure(this.exceptionOrNull())
+        d.completeExceptionally(this.exceptionOrNull()!!)
     }
     return d
 }
@@ -91,24 +85,22 @@ inline fun <T, R> Deferred<T>.thenApply(crossinline transform: (T) -> R): Deferr
     if (isCompleted) {
         return try {
             completedDeferred(transform(this.getCompleted()))
-        } catch (ex: Exception) {
-            if (ex is CancellationException && this.isCancelled) {
-                return cancelledDeferred(ex)
+        } catch (ex: Throwable) {
+            when (ex) {
+                is CancellationException -> cancelledDeferred(ex)
+                else -> exceptionalDeferred(ex)
             }
-            ex.maybeRethrowCompletionHandlerException()
-            exceptionalDeferred(ex)
         }
     }
 
     val d = completableDeferred<R>()
     this.invokeOnCompletion { throwable ->
         if (throwable != null) {
-            d.propagateUpstreamFailure(throwable)
+            d.completeExceptionally(throwable)
         } else {
             try {
                 d.complete(transform(this.getCompleted()))
-            } catch (ex: Exception) {
-                ex.maybeRethrowCompletionHandlerException()
+            } catch (ex: Throwable) {
                 d.completeExceptionally(ex)
             }
         }
@@ -120,45 +112,34 @@ fun <T : Any?, U : Any?> Deferred<T>.handle(handler: (T?, Throwable?) -> U): Def
     // fast path: already completed (either successfully or exceptionally)
     if (isCompleted) {
         val failure = getCompletionExceptionOrNull()
-        if (failure is CancellationException && this.isCancelled) {
-            return cancelledDeferred(failure)
-        }
-        if (failure != null) {
-            return try {
-                completedDeferred(handler(null, failure))
-            } catch (ex: Exception) {
-                ex.maybeRethrowCompletionHandlerException()
-                exceptionalDeferred(ex)
-            }
-        }
         return try {
-            completedDeferred(handler(getCompleted(), null))
-        } catch (ex: Exception) {
-            ex.maybeRethrowCompletionHandlerException()
-            exceptionalDeferred(ex)
+            if (failure == null) {
+                // success
+                completedDeferred(handler(getCompleted(), null))
+            } else {
+                // exceptional (includes CancellationException); defer to handler
+                completedDeferred(handler(null, failure))
+            }
+        } catch (e: Throwable) {
+            // if the handler itself throws, propagate that
+            exceptionalDeferred(e)
         }
     }
 
     val d = completableDeferred<U>()
     this.invokeOnCompletion { throwable ->
         val transformed = if (throwable != null) {
-            if (throwable is CancellationException && this.isCancelled) {
-                d.cancel(throwable)
-                return@invokeOnCompletion
-            }
             try {
                 handler(null, throwable)
-            } catch (ex: Exception) {
-                ex.maybeRethrowCompletionHandlerException()
-                d.completeExceptionally(ex)
+            } catch (e: Throwable) {
+                d.completeExceptionally(e)
                 return@invokeOnCompletion
             }
         } else {
             try {
                 handler(this.getCompleted(), null)
-            } catch (ex: Exception) {
-                ex.maybeRethrowCompletionHandlerException()
-                d.completeExceptionally(ex)
+            } catch (e: Throwable) {
+                d.completeExceptionally(e)
                 return@invokeOnCompletion
             }
         }
@@ -178,12 +159,11 @@ fun <T, R> Deferred<T>.thenCompose(fn: (T) -> Deferred<R>): Deferred<R> {
     if (isCompleted) {
         return try {
             fn(getCompleted())
-        } catch (ex: Exception) {
-            if (ex is CancellationException && this.isCancelled) {
-                return cancelledDeferred(ex)
+        } catch (ex: Throwable) {
+            when (ex) {
+                is CancellationException -> cancelledDeferred(ex)
+                else -> exceptionalDeferred(ex)
             }
-            ex.maybeRethrowCompletionHandlerException()
-            exceptionalDeferred(ex)
         }
     }
 
@@ -201,36 +181,44 @@ fun <T, R> Deferred<T>.thenCompose(fn: (T) -> Deferred<R>): Deferred<R> {
 
     this.invokeOnCompletion { outerCause ->
         if (outerCause != null) {
-            d.propagateUpstreamFailure(outerCause)
+            // Propagate cancellation distinctly
+            if (outerCause is CancellationException) {
+                d.cancel(outerCause)
+            } else {
+                d.completeExceptionally(outerCause)
+            }
             return@invokeOnCompletion
         }
 
         // Outer completed successfully
         val value: T = try {
             this.getCompleted()
-        } catch (ex: Exception) {
+        } catch (ex: Throwable) {
             // Extremely defensive: getCompleted() should succeed here, but just in case
-            this.propagateLocalFailure(d, ex)
+            if (ex is CancellationException) d.cancel(ex) else d.completeExceptionally(ex)
             return@invokeOnCompletion
         }
 
         val inner: Deferred<R> = try {
             fn(value)
-        } catch (ex: Exception) {
-            ex.maybeRethrowCompletionHandlerException()
-            d.completeExceptionally(ex)
+        } catch (ex: Throwable) {
+            if (ex is CancellationException) d.cancel(ex) else d.completeExceptionally(ex)
             return@invokeOnCompletion
         }.also { created -> innerRef.set(created) }
 
         inner.invokeOnCompletion { innerCause ->
             if (innerCause != null) {
-                d.propagateUpstreamFailure(innerCause)
+                if (innerCause is CancellationException) {
+                    d.cancel(innerCause)
+                } else {
+                    d.completeExceptionally(innerCause)
+                }
             } else {
                 try {
                     d.complete(inner.getCompleted())
-                } catch (ex: Exception) {
+                } catch (ex: Throwable) {
                     // Shouldn't happen if innerCause == null, but be safe
-                    inner.propagateLocalFailure(d, ex)
+                    if (ex is CancellationException) d.cancel(ex) else d.completeExceptionally(ex)
                 }
             }
         }
@@ -244,15 +232,15 @@ fun <T> Deferred<T>.exceptionally(fallback: (Throwable) -> T): Deferred<T> {
     if (isCompleted) {
         return try {
             completedDeferred(getCompleted())
-        } catch (ex: Exception) {
-            if (ex is CancellationException) {
-                return cancelledDeferred(ex)
-            }
-            return try {
-                completedDeferred(fallback(ex))
-            } catch (fallbackEx: Exception) {
-                fallbackEx.maybeRethrowCompletionHandlerException()
-                exceptionalDeferred<T>(fallbackEx)
+        } catch (ex: Throwable) {
+            // Do NOT recover cancellations; propagate them
+            when (ex) {
+                is CancellationException -> cancelledDeferred(ex)
+                else -> try {
+                    completedDeferred(fallback(ex))
+                } catch (e: Throwable) {
+                    if (e is CancellationException) cancelledDeferred(e) else exceptionalDeferred<T>(e)
+                }
             }
         }
     }
@@ -260,14 +248,9 @@ fun <T> Deferred<T>.exceptionally(fallback: (Throwable) -> T): Deferred<T> {
     val d = completableDeferred<T>()
     invokeOnCompletion { throwable ->
         if (throwable != null) {
-            if (throwable is CancellationException && this.isCancelled) {
-                d.cancel(throwable)
-                return@invokeOnCompletion
-            }
             try {
                 d.complete(fallback(throwable))
-            } catch (ex: Exception) {
-                ex.maybeRethrowCompletionHandlerException()
+            } catch (ex: Throwable) {
                 d.completeExceptionally(ex)
             }
         } else {
@@ -281,15 +264,14 @@ fun <T> Deferred<T>.exceptionallyCompose(fallback: (Throwable) -> Deferred<T>): 
     if (isCompleted) {
         return try {
             completedDeferred(getCompleted())
-        } catch (ex: Exception) {
-            if (ex is CancellationException) {
-                return cancelledDeferred(ex)
-            }
-            return try {
-                fallback(ex)
-            } catch (fallbackEx: Exception) {
-                fallbackEx.maybeRethrowCompletionHandlerException()
-                exceptionalDeferred<T>(fallbackEx)
+        } catch (ex: Throwable) {
+            when (ex) {
+                is CancellationException -> cancelledDeferred(ex) // propagate, don't recover
+                else -> try {
+                    fallback(ex)
+                } catch (e: Throwable) {
+                    if (e is CancellationException) cancelledDeferred(e) else exceptionalDeferred<T>(e)
+                }
             }
         }
     }
@@ -297,7 +279,7 @@ fun <T> Deferred<T>.exceptionallyCompose(fallback: (Throwable) -> Deferred<T>): 
     val d = completableDeferred<T>()
     val fbRef = AtomicReference<Deferred<T>?>(null)
 
-    // If d is cancelled by the caller, cancel fbRef to avoid leaks.
+    // If caller cancels d, cancel the fallback to avoid leaks.
     d.invokeOnCompletion { cause ->
         if (cause is CancellationException) {
             fbRef.get()?.cancel(cause)
@@ -309,13 +291,15 @@ fun <T> Deferred<T>.exceptionallyCompose(fallback: (Throwable) -> Deferred<T>): 
             // Outer completed successfully
             try {
                 d.complete(this.getCompleted())
-            } catch (ex: Exception) {
-                this.propagateLocalFailure(d, ex)
+            } catch (e: Throwable) {
+                if (e is CancellationException) d.cancel(e) else d.completeExceptionally(e)
             }
             return@invokeOnCompletion
         }
 
-        if (cause is CancellationException && this.isCancelled) {
+        // Outer completed with failure or cancellation
+        if (cause is CancellationException) {
+            // Do not recover cancellations; propagate them
             d.cancel(cause)
             return@invokeOnCompletion
         }
@@ -323,9 +307,8 @@ fun <T> Deferred<T>.exceptionallyCompose(fallback: (Throwable) -> Deferred<T>): 
         // Failure (non-cancellation): run fallback
         val fb = try {
             fallback(cause)
-        } catch (ex: Exception) {
-            ex.maybeRethrowCompletionHandlerException()
-            d.completeExceptionally(ex)
+        } catch (e: Throwable) {
+            if (e is CancellationException) d.cancel(e) else d.completeExceptionally(e)
             return@invokeOnCompletion
         }.also { fbRef.set(it) }
 
@@ -333,11 +316,11 @@ fun <T> Deferred<T>.exceptionallyCompose(fallback: (Throwable) -> Deferred<T>): 
             if (fbCause == null) {
                 try {
                     d.complete(fb.getCompleted())
-                } catch (ex: Exception) {
-                    fb.propagateLocalFailure(d, ex)
+                } catch (e: Throwable) {
+                    if (e is CancellationException) d.cancel(e) else d.completeExceptionally(e)
                 }
             } else {
-                d.propagateUpstreamFailure(fbCause)
+                if (fbCause is CancellationException) d.cancel(fbCause) else d.completeExceptionally(fbCause)
             }
         }
     }
@@ -377,9 +360,8 @@ fun <T, U, R> Deferred<T>.thenCombine(
     }
 
 /**
- * Convert a CompletionStage to a parented Deferred. We implement our own version instead of
- * kotlinx-coroutines' `asDeferred` so the resulting Deferred is tied into our job hierarchy and
- * propagates cancellation back to the underlying CompletionStage.
+ * Convert a CompletionStage to a Deferred. The returned Deferred will attempt to
+ * cancel the underlying CompletionStage if it is cancelled.
  */
 fun <T> CompletionStage<T>.asDeferred(): Deferred<T> {
     val f = toCompletableFuture()
@@ -388,13 +370,9 @@ fun <T> CompletionStage<T>.asDeferred(): Deferred<T> {
     if (f.isDone) {
         return try {
             completedDeferred(f.get())
-        } catch (ex: Exception) {
+        } catch (ex: Throwable) {
             val original = (ex as? ExecutionException)?.cause ?: ex
-            when (original) {
-                is CancellationException -> cancelledDeferred(original)
-                is Exception -> exceptionalDeferred(original)
-                else -> throw original
-            }
+            exceptionalDeferred(original)
         }
     }
 
@@ -405,12 +383,7 @@ fun <T> CompletionStage<T>.asDeferred(): Deferred<T> {
                 // Best-effort; safe for both CF and other stages backed by CF
                 try {
                     f.cancel(true)
-                } catch (ex: Exception) {
-                    try {
-                        ex.maybeRethrowCompletionHandlerException()
-                    } catch (cancel: CancellationException) {
-                        // swallow CancellationException triggered while canceling the future
-                    }
+                } catch (_: Throwable) {
                 }
             }
         }
@@ -421,160 +394,9 @@ fun <T> CompletionStage<T>.asDeferred(): Deferred<T> {
         if (ex == null) {
             d.complete(value)
         } else {
-            d.propagateUpstreamFailure(ex)
+            d.completeExceptionally(ex)
         }
     }
 
     return d
-}
-
-/**
- * Waits for every Deferred in [deferreds] to finish, failing fast on the first error or cancellation
- * and cancelling the remaining inputs if that happens.
- *
- * @param deferreds inputs to synchronize
- * @return a Deferred that completes when all inputs finish successfully or propagates the first failure
- */
-fun waitAllDeferreds(deferreds: Collection<Deferred<*>>): Deferred<Unit> {
-    if (deferreds.isEmpty()) return completedDeferred(Unit)
-
-    if (deferreds.all { it.isCompleted }) {
-        return try {
-            deferreds.forEach { it.getCompleted() }
-            completedDeferred(Unit)
-        } catch (ex: Exception) {
-            ex.maybeRethrowCompletionHandlerException()
-            when (ex) {
-                is CancellationException -> cancelledDeferred(ex)
-                else -> exceptionalDeferred(ex)
-            }
-        }
-    }
-
-    val result = completableDeferred<Unit>()
-    val remaining = AtomicInteger(deferreds.size)
-    val failed = AtomicBoolean(false)
-
-    result.invokeOnCompletion { cause ->
-        if (cause is CancellationException) {
-            deferreds.forEach { d ->
-                if (!d.isCompleted) {
-                    try {
-                        d.cancel(cause)
-                    } catch (ex: Exception) {
-                        try {
-                            ex.maybeRethrowCompletionHandlerException()
-                        } catch (cancel: CancellationException) {
-                            // already cancelling; swallow cancellation exceptions here
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    deferreds.forEach { d ->
-        d.invokeOnCompletion { cause ->
-            if (cause == null) {
-                if (!failed.get() && remaining.decrementAndGet() == 0) {
-                    result.complete(Unit)
-                }
-            } else if (failed.compareAndSet(false, true)) {
-                when (cause) {
-                    is CancellationException -> result.cancel(cause)
-                    else -> result.completeExceptionally(cause)
-                }
-                val cancelCause = CancellationException("waitAll fail-fast")
-                deferreds.forEach { other ->
-                    if (other !== d && !other.isCompleted) {
-                        try {
-                            other.cancel(cancelCause)
-                        } catch (ex: Exception) {
-                            try {
-                                ex.maybeRethrowCompletionHandlerException()
-                            } catch (cancel: CancellationException) {
-                                // ignore cancellation exceptions thrown while cascading cancel
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    return result
-}
-
-/**
- * Re-throws `CompletionHandlerException` so we're not accidentally swallowing critical coroutines failures.
- * @receiver the exception to inspect for coroutine-specific types that must be rethrown
- */
-@OptIn(InternalCoroutinesApi::class)
-fun Exception.maybeRethrowCompletionHandlerException() {
-    if (this is CompletionHandlerException) {
-        throw this
-    }
-}
-
-/**
- * Treat a throwable thrown inside the current coroutine as either a cancellation signal or a
- * regular exception based on the provided (or thread-local) job's state.
- */
-@OptIn(InternalCoroutinesApi::class)
-inline fun <T> Throwable.handleLocalCancellation(
-    job: Job,
-    onCancellation: (CancellationException) -> T,
-    onNonCancellation: (Exception) -> T
-): T {
-    return when (this) {
-        is CancellationException -> {
-            if (job.isCancelled) {
-                onCancellation(this)
-            } else {
-                onNonCancellation(this)
-            }
-        }
-
-        is Exception -> {
-            maybeRethrowCompletionHandlerException()
-            onNonCancellation(this)
-        }
-
-        else -> throw this // Errors should propagate immediately
-    }
-}
-
-/**
- * Finish this deferred with an exception that was thrown inside its own coroutine context.
- *
- * If the deferred's job is already cancelled we propagate that cancellation; otherwise we surface
- * the throwable as a normal exceptional completion.
- */
-fun Deferred<*>.propagateLocalFailure(
-    target: CompletableDeferred<*>,
-    error: Throwable
-) {
-    error.handleLocalCancellation(this, { cancel ->
-        target.cancel(cancel)
-    }) { ex ->
-        target.completeExceptionally(ex)
-    }
-}
-
-/**
- * Relay a failure that originated upstream (another coroutine, CompletionStage, etc.).
- *
- * CancellationExceptions are always forwarded as cancellations, while other throwables simply
- * complete this deferred exceptionally. CompletionHandlerExceptions are rethrown so they are not
- * swallowed, and we never catch [Error] types.
- */
-@OptIn(InternalCoroutinesApi::class)
-fun CompletableDeferred<*>.propagateUpstreamFailure(failure: Throwable?) {
-    when (failure) {
-        null -> return
-        is CompletionHandlerException -> throw failure
-        is CancellationException -> cancel(failure)
-        is Exception -> completeExceptionally(failure)
-        else -> throw failure
-    }
 }

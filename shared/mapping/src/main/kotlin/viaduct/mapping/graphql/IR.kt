@@ -16,7 +16,7 @@ import java.time.temporal.TemporalAccessor
  * @see [Domain.objectToIR]
  */
 object IR : Domain<IR.Value.Object> {
-    override val conv: Conv<Value.Object, Value.Object> = Conv.identity()
+    override fun objectToIR(): Conv<Value.Object, Value.Object> = Conv.identity()
 
     sealed interface Value {
         /** A representation of a GraphQL boolean value */

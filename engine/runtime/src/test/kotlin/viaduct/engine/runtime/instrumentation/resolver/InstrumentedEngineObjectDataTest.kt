@@ -1,11 +1,9 @@
-@file:Suppress("ForbiddenImport")
-
 package viaduct.engine.runtime.instrumentation.resolver
 
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
@@ -17,7 +15,7 @@ internal class InstrumentedEngineObjectDataTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `fetch calls instrumentation during execution`() =
-        runBlocking {
+        runBlockingTest {
             // Given
             val mockEngineObjectData: EngineObjectData = mockk()
             val instrumentation = RecordingResolverInstrumentation()
@@ -47,7 +45,7 @@ internal class InstrumentedEngineObjectDataTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `fetchOrNull calls instrumentation during execution`() =
-        runBlocking {
+        runBlockingTest {
             // Given
             val mockEngineObjectData: EngineObjectData = mockk()
             val instrumentation = RecordingResolverInstrumentation()
@@ -76,7 +74,7 @@ internal class InstrumentedEngineObjectDataTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `fetch propagates instrumentation exceptions`() =
-        runBlocking {
+        runBlockingTest {
             // Given
             val mockEngineObjectData: EngineObjectData = mockk()
             val instrumentation = ThrowingResolverInstrumentation(throwOnInstrumentFetch = true)
@@ -97,7 +95,7 @@ internal class InstrumentedEngineObjectDataTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `fetch propagates fetch exceptions`() =
-        runBlocking {
+        runBlockingTest {
             // Given
             val mockEngineObjectData: EngineObjectData = mockk()
             val instrumentation = RecordingResolverInstrumentation()

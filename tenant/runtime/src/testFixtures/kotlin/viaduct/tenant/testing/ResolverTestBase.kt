@@ -136,7 +136,7 @@ interface ResolverTestBase {
         objectValue: Object = NullObject,
         queryValue: Query = NullQuery,
         arguments: Arguments = Arguments.NoArguments,
-        requestContext: Any? = null,
+        requestContext: ExecutionContext? = null,
         selections: SelectionSet<*> = SelectionSet.NoSelections,
         contextQueryValues: List<Query> = emptyList()
     ): T {
@@ -266,7 +266,6 @@ interface ResolverTestBase {
         }
 
         val rl = context.internal.reflectionLoader
-
         @Suppress("UNCHECKED_CAST")
         val rootQueryType = rl.reflectionFor(getSchema().schema.queryType.name) as Type<Query>
         val resultMap = mutableMapOf<String, Query>()
@@ -319,7 +318,6 @@ interface ResolverTestBase {
             mkMutationFieldExecutionContext(
                 queryValue,
                 arguments,
-                requestContext,
                 selections,
                 contextQueries
             )
@@ -328,7 +326,6 @@ interface ResolverTestBase {
                 objectValue,
                 queryValue,
                 arguments,
-                requestContext,
                 selections,
                 contextQueries
             )
@@ -355,23 +352,6 @@ interface ResolverTestBase {
         SelectionSetFactoryImpl(
             RawSelectionSetFactoryImpl(getSchema())
         )
-
-    /**
-     * Helper function to add a field with an alias to an ObjectBase.Builder.
-     * This is useful for testing resolvers that return fields with aliases.
-     */
-    fun <R, T : ObjectBase.Builder<R>> T.put(
-        name: String,
-        value: Any?,
-        alias: String
-    ): T {
-        return ObjectBaseTestHelpers.putWithAlias(
-            builder = this,
-            name = name,
-            value = value,
-            alias = alias
-        )
-    }
 }
 
 // Internal helper functions and values
@@ -393,7 +373,6 @@ private fun <T : NodeObject> getNodeResolverContextKClass(resolver: NodeResolver
 private fun <T : NodeObject> ResolverTestBase.mkNodeExecutionContext(
     id: GlobalID<T>,
     selections: SelectionSet<T>,
-    requestContext: Any? = null,
     contextQueryValues: List<Query> = emptyList()
 ): NodeExecutionContext<T> {
     val internalContext = context.internal
@@ -460,7 +439,6 @@ private fun ResolverTestBase.mkFieldExecutionContext(
     objectValue: Object,
     queryValue: Query,
     arguments: Arguments,
-    requestContext: Any?,
     selections: SelectionSet<*>,
     contextQueryValues: List<Query> = emptyList()
 ): FieldExecutionContext<*, *, *, *> {
@@ -471,7 +449,6 @@ private fun ResolverTestBase.mkFieldExecutionContext(
         objectValue = objectValue,
         queryValue = queryValue,
         arguments = arguments,
-        requestContext = requestContext,
         selectionsValue = selections,
         internalContext = internalContext,
         queryResults = queryResultsMap,
@@ -482,7 +459,6 @@ private fun ResolverTestBase.mkFieldExecutionContext(
 private fun ResolverTestBase.mkMutationFieldExecutionContext(
     queryValue: Query,
     arguments: Arguments,
-    requestContext: Any?,
     selections: SelectionSet<*>,
     contextQueryValues: List<Query> = emptyList()
 ): MutationFieldExecutionContext<*, *, *> {
@@ -492,7 +468,6 @@ private fun ResolverTestBase.mkMutationFieldExecutionContext(
     return MockMutationFieldExecutionContext(
         queryValue = queryValue,
         arguments = arguments,
-        requestContext = requestContext,
         selectionsValue = selections,
         internalContext = internalContext,
         queryResults = queryResultsMap,
@@ -527,6 +502,19 @@ class QueryForSelection(
     val selections: String,
     val query: Query
 ) : Query by query
+
+fun <R, T : ObjectBase.Builder<R>> T.put(
+    name: String,
+    value: Any?,
+    alias: String
+): T {
+    return ObjectBaseTestHelpers.putWithAlias(
+        builder = this,
+        name = name,
+        value = value,
+        alias = alias
+    )
+}
 
 @Suppress("USELESS_CAST")
 private fun <T : CompositeOutput> prebakedResultsOf(results: Map<String, T>) =

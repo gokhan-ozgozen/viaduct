@@ -6,10 +6,7 @@ import graphql.schema.DataFetcher
 import viaduct.engine.api.FieldCheckerDispatcherRegistry
 import viaduct.engine.api.FieldResolverDispatcher
 import viaduct.engine.api.FieldResolverDispatcherRegistry
-import viaduct.engine.api.ResolutionPolicy
-import viaduct.engine.api.ViaductDataFetchingEnvironment
 import viaduct.engine.api.coroutines.CoroutineInterop
-import viaduct.engine.api.engineExecutionContext
 import viaduct.engine.api.instrumentation.ViaductModernGJInstrumentation
 import viaduct.engine.runtime.execution.DefaultCoroutineInterop
 import viaduct.engine.runtime.execution.ResolverDataFetcher
@@ -28,13 +25,7 @@ class ResolverDataFetcherInstrumentation(
         parameters: InstrumentationFieldFetchParameters,
         state: InstrumentationState?
     ): DataFetcher<*> {
-        val dfEnv = parameters.environment as ViaductDataFetchingEnvironment
-
-        val resolutionPolicy = dfEnv.engineExecutionContext.fieldScope.resolutionPolicy
-        if (resolutionPolicy == ResolutionPolicy.PARENT_MANAGED) {
-            return dataFetcher
-        }
-
+        val dfEnv = parameters.environment
         val typeName = dfEnv.parentType.asNamedElement().name
         val fieldName = dfEnv.fieldDefinition.name
 

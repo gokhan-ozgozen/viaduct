@@ -81,7 +81,7 @@ interface ViaductModernInstrumentation {
                 override fun beginFetchObject(
                     parameters: InstrumentationExecutionStrategyParameters,
                     state: InstrumentationState?
-                ): InstrumentationContext<Unit> {
+                ): InstrumentationContext<Map<String, Any?>>? {
                     if (viaductInstrumentation is WithBeginFetchObject) {
                         return viaductInstrumentation.beginFetchObject(parameters, state)
                     }
@@ -111,7 +111,7 @@ interface ViaductModernInstrumentation {
                 override fun beginCompleteObject(
                     parameters: InstrumentationExecutionStrategyParameters,
                     state: InstrumentationState?
-                ): InstrumentationContext<Any> {
+                ): InstrumentationContext<Any>? {
                     if (viaductInstrumentation is WithBeginCompleteObject) {
                         return viaductInstrumentation.beginCompleteObject(parameters, state)
                     }
@@ -210,10 +210,7 @@ interface ViaductModernInstrumentation {
                     return ExecuteObjectInstrumentationContext.NOOP
                 }
 
-                override fun beginDeferredField(
-                    parameters: InstrumentationFieldParameters?,
-                    state: InstrumentationState?
-                ): InstrumentationContext<Any> {
+                override fun beginDeferredField(state: InstrumentationState?): InstrumentationContext<Any> {
                     return noOp()
                 }
 
@@ -283,14 +280,14 @@ interface ViaductModernInstrumentation {
         fun beginFetchObject(
             parameters: InstrumentationExecutionStrategyParameters,
             state: InstrumentationState?
-        ): InstrumentationContext<Unit>
+        ): InstrumentationContext<Map<String, Any?>>?
     }
 
     interface WithBeginFieldExecution : ViaductModernInstrumentation {
         fun beginFieldExecution(
             parameters: InstrumentationFieldParameters,
             state: InstrumentationState?
-        ): InstrumentationContext<Any>
+        ): InstrumentationContext<Any>?
     }
 
     interface WithBeginFieldFetching : ViaductModernInstrumentation {
@@ -304,7 +301,7 @@ interface ViaductModernInstrumentation {
         fun beginCompleteObject(
             parameters: InstrumentationExecutionStrategyParameters,
             state: InstrumentationState?
-        ): InstrumentationContext<Any>
+        ): InstrumentationContext<Any>?
     }
 
     interface WithBeginFieldCompletion : ViaductModernInstrumentation {
@@ -396,14 +393,14 @@ interface ViaductModernGJInstrumentation : Instrumentation {
                 override fun beginFetchObject(
                     parameters: InstrumentationExecutionStrategyParameters,
                     state: InstrumentationState?
-                ): InstrumentationContext<Unit> {
+                ): InstrumentationContext<Map<String, Any?>>? {
                     return noOp()
                 }
 
                 override fun beginCompleteObject(
                     parameters: InstrumentationExecutionStrategyParameters,
                     state: InstrumentationState?
-                ): InstrumentationContext<Any> {
+                ): InstrumentationContext<Any>? {
                     return noOp()
                 }
 
@@ -535,14 +532,14 @@ interface ViaductModernGJInstrumentation : Instrumentation {
     fun beginFetchObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Unit> {
+    ): InstrumentationContext<Map<String, Any?>>? {
         return noOp()
     }
 
     fun beginCompleteObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> {
+    ): InstrumentationContext<Any>? {
         return noOp()
     }
 

@@ -9,11 +9,11 @@ import viaduct.engine.api.EngineExecutionContext
 import viaduct.engine.api.FragmentLoader
 import viaduct.engine.api.ViaductSchema
 import viaduct.engine.api.fragment.ViaductExecutableFragmentParser
+import viaduct.engine.runtime.CompositeLocalContext
 import viaduct.engine.runtime.DispatcherRegistry
 import viaduct.engine.runtime.EngineExecutionContextFactory
 import viaduct.engine.runtime.EngineExecutionContextImpl
 import viaduct.engine.runtime.ViaductFragmentLoader
-import viaduct.engine.runtime.context.CompositeLocalContext
 import viaduct.service.api.spi.FlagManager
 import viaduct.service.api.spi.mocks.MockFlagManager
 

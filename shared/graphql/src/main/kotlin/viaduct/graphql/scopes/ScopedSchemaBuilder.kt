@@ -28,7 +28,7 @@ import viaduct.utils.memoize.memoize
  * produce the final schema projection with the scopes applied. The resulting projection will be memoized for the
  * lifetime of the instance of this class.
  *
- * See https://viaduct.airbnb.tech/docs/scopes/ for more information.
+ * See https://airbnb.io/viaduct/docs/scopes/ for more information.
  *
  * @property inputSchema The fully-annotated input schema that contains schema elements belonging to
  *                       _all_ available scopes

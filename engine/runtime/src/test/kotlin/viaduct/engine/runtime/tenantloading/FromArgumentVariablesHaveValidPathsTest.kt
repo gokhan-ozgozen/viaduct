@@ -410,7 +410,7 @@ class FromArgumentVariablesHaveValidPathsTest {
     }
 
     @Test
-    fun `valid -- non-list value can be coerced to list context`() {
+    fun `invalid -- non-list value used in list context`() {
         Fixture(
             """
             type Query {
@@ -419,7 +419,7 @@ class FromArgumentVariablesHaveValidPathsTest {
             }
             """.trimIndent()
         ) {
-            assertValid(
+            assertInvalid(
                 "Query" to "foo",
                 "acceptList(items: \$item)",
                 listOf(
@@ -437,7 +437,7 @@ class FromArgumentVariablesHaveValidPathsTest {
             }
             """.trimIndent()
         ) {
-            assertValid(
+            assertInvalid(
                 "Query" to "foo",
                 "acceptNullableList(items: \$item)",
                 listOf(
@@ -455,7 +455,7 @@ class FromArgumentVariablesHaveValidPathsTest {
             }
             """.trimIndent()
         ) {
-            assertValid(
+            assertInvalid(
                 "Query" to "foo",
                 "acceptNestedList(items: \$innerList)",
                 listOf(
@@ -473,7 +473,7 @@ class FromArgumentVariablesHaveValidPathsTest {
             }
             """.trimIndent()
         ) {
-            assertValid(
+            assertInvalid(
                 "Query" to "foo",
                 "acceptNullableItems(items: \$item)",
                 listOf(
@@ -523,35 +523,6 @@ class FromArgumentVariablesHaveValidPathsTest {
                 )
             )
 
-            assertTrue(exception.message.contains("Type mismatch"))
-        }
-    }
-
-    @Test
-    fun `invalid -- fragment spread with variable`() {
-        Fixture("type Query { foo(x: String!): Int!, bar(y: Int): Int }") {
-            val exception = assertInvalid(
-                "Query" to "foo",
-                "fragment Main on Query { ...QueryFields } fragment QueryFields on Query { bar(y: \$x) }",
-                listOf(FromArgument("x", listOf("x")))
-            )
-            assertTrue(exception.message.contains("Type mismatch"))
-        }
-    }
-
-    @Test
-    fun `invalid -- fragment spread on non-Query type`() {
-        Fixture(
-            """
-            type Query { foo: String }
-            type User { updateName(name: Int!): String!, updateProfile(data: String): String }
-            """.trimIndent()
-        ) {
-            val exception = assertInvalid(
-                "User" to "updateName",
-                "fragment Main on User { ...UserFields } fragment UserFields on User { updateProfile(data: \$userName) }",
-                listOf(FromArgument("userName", listOf("name")))
-            )
             assertTrue(exception.message.contains("Type mismatch"))
         }
     }

@@ -22,7 +22,7 @@ class ArgumentsTest {
             schema
         )
         assertEquals("O2_ArgumentedField_Arguments", input.name)
-        assertEquals(4, input.fields.size)
+        assertEquals(3, input.fields.size)
         val stringArgType = input.getField("stringArg").type
         assertTrue(stringArgType is GraphQLNonNull)
         assertEquals("String", (GraphQLTypeUtil.unwrapNonNull(stringArgType) as GraphQLNamedSchemaElement).name)
@@ -32,9 +32,6 @@ class ArgumentsTest {
 
         val inputArgType = input.getField("inputArg").type
         assertEquals("Input1", (inputArgType as GraphQLInputObjectType).name)
-
-        val idArg = input.getField("idArg")
-        assertTrue(idArg.appliedDirectives.any({ it.name == "idOf" }))
     }
 
     @Test

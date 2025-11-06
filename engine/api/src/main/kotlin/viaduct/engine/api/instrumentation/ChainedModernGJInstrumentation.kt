@@ -11,7 +11,7 @@ open class ChainedModernGJInstrumentation(
     override fun beginFetchObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Unit> =
+    ): InstrumentationContext<Map<String, Any?>>? =
         ChainedInstrumentationContext(
             gjInstrumentations.map { instr ->
                 instr.beginFetchObject(parameters, getState(instr, state))
@@ -21,7 +21,7 @@ open class ChainedModernGJInstrumentation(
     override fun beginCompleteObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> =
+    ): InstrumentationContext<Any>? =
         ChainedInstrumentationContext(
             gjInstrumentations.map { instr ->
                 instr.beginCompleteObject(parameters, getState(instr, state))

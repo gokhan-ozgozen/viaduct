@@ -5,8 +5,8 @@ import graphql.execution.ExecutionContext
 import graphql.execution.FetchedValue
 import kotlinx.coroutines.withContext
 import viaduct.engine.api.context.DispatcherLocalContext
-import viaduct.engine.runtime.context.CompositeLocalContext
-import viaduct.engine.runtime.context.getLocalContextForType
+import viaduct.engine.runtime.CompositeLocalContext
+import viaduct.engine.runtime.getLocalContextForType
 
 suspend inline fun <T> ExecutionContext.executeWithDispatcher(crossinline block: suspend () -> T): T {
     val dispatcherLocalContext = this.executionInput.getLocalContextForType<DispatcherLocalContext>() ?: return block()

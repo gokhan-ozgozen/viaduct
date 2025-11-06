@@ -1,13 +1,16 @@
 package viaduct.api.internal
 
+import com.google.common.annotations.VisibleForTesting
 import graphql.GraphQLContext
 import graphql.schema.GraphQLCompositeType
 import graphql.schema.GraphQLEnumType
+import graphql.schema.GraphQLInterfaceType
 import graphql.schema.GraphQLList
 import graphql.schema.GraphQLObjectType
 import graphql.schema.GraphQLScalarType
 import graphql.schema.GraphQLType
 import graphql.schema.GraphQLTypeUtil
+import graphql.schema.GraphQLUnionType
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
@@ -15,16 +18,13 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.full.isSubclassOf
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
+import kotlin.reflect.full.primaryConstructor
 import viaduct.api.DynamicOutputValueBuilder
 import viaduct.api.ViaductFrameworkException
 import viaduct.api.ViaductTenantException
 import viaduct.api.ViaductTenantUsageException
 import viaduct.api.globalid.GlobalID
 import viaduct.api.handleTenantAPIErrors
-import viaduct.api.reflect.Type
 import viaduct.api.types.NodeObject
 import viaduct.api.types.Object
 import viaduct.engine.api.EngineObject
@@ -52,7 +52,6 @@ abstract class ObjectBase(
         try {
             return get(fieldName, baseFieldTypeClass, alias)
         } catch (ex: Exception) {
-            if (ex is CancellationException) currentCoroutineContext().ensureActive()
             when (ex) {
                 is ViaductTenantException -> throw ex
                 is EngineObjectDataFetchException -> throw ex.cause!!
@@ -99,7 +98,6 @@ abstract class ObjectBase(
                     else -> throw ViaductFrameworkException("Unknown EngineObject subclass ${engineObject.javaClass.name}")
                 }
             } catch (ex: Exception) {
-                if (ex is CancellationException) currentCoroutineContext().ensureActive()
                 when (ex) {
                     is UnsetSelectionException -> throw ViaductTenantUsageException(ex.message, ex)
                     is ViaductTenantException, is ViaductFrameworkException -> throw ex
@@ -183,25 +181,29 @@ abstract class ObjectBase(
             throw IllegalArgumentException("Expected value to be an instance of EngineObjectData, got $value")
         }
 
-        val valueType = context.reflectionLoader.reflectionFor(value.graphQLObjectType.name)
-
-        if (type is GraphQLObjectType) {
-            require(type.name == value.graphQLObjectType.name) {
+        if (type is GraphQLObjectType && type.name != value.graphQLObjectType.name) {
+            throw IllegalArgumentException(
                 "Expected value with GraphQL type ${type.name}, got ${value.graphQLObjectType.name}"
-            }
-        } else {
-            // type is an interface or union
-            val typeType = context.reflectionLoader.reflectionFor(type.name)
-            require(valueType.kcls.isSubclassOf(typeType.kcls)) {
-                "Expected value to be a subtype of ${type.name}, got ${valueType.name}"
-            }
-        }
-        require(valueType.kcls.isSubclassOf(ObjectBase::class)) {
-            "Expected baseFieldTypeClass that's a subtype of ObjectBase, got ${valueType.kcls}"
+            )
         }
 
-        @Suppress("UNCHECKED_CAST")
-        return wrapOutputObject(context, valueType as Type<Object>, value) as ObjectBase
+        val klass = context.reflectionLoader.reflectionFor(value.graphQLObjectType.name).kcls
+        if (type is GraphQLInterfaceType || type is GraphQLUnionType) {
+            val typeKlass = context.reflectionLoader.reflectionFor(type.name).kcls
+            if (!klass.isSubclassOf(typeKlass)) {
+                throw IllegalArgumentException(
+                    "Expected value to be a subtype of ${type.name}, got ${klass.simpleName}"
+                )
+            }
+        }
+
+        if (!klass.isSubclassOf(ObjectBase::class)) {
+            throw IllegalArgumentException(
+                "Expected baseFieldTypeClass that's a subtype of ObjectBase, got $klass"
+            )
+        }
+
+        return klass.primaryConstructor!!.call(context, value) as ObjectBase
     }
 
     /**
@@ -270,7 +272,7 @@ abstract class ObjectBase(
          * Dynamic builder function with type check and alias support.
          * Only used for unit tests, where we need to associate data with an alias.
          */
-        // Internal for testing
+        @VisibleForTesting
         internal fun put(
             name: String,
             value: Any?,

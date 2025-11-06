@@ -1,30 +1,21 @@
-@file:Suppress("ForbiddenImport", "TooGenericExceptionThrown")
+@file:Suppress("ForbiddenImport")
 
 package viaduct.deferred
 
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.random.Random
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.CompletionHandlerException
-import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.InternalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -391,74 +382,6 @@ class DeferredExtensionsTest {
     }
 
     @Nested
-    inner class CancellationBehaviorTests {
-        @Test
-        fun `handle propagates upstream cancellation without invoking handler`() =
-            runBlocking {
-                val source = CompletableDeferred<String>()
-                val handlerInvoked = AtomicBoolean(false)
-
-                val handled = source.handle { value, throwable ->
-                    handlerInvoked.set(true)
-                    "$value:${throwable?.message}"
-                }
-
-                source.cancel(CancellationException("boom"))
-
-                assertThrows<CancellationException> { handled.await() }
-                assertTrue(handled.isCancelled, "Derived deferred should be cancelled")
-                assertFalse(handlerInvoked.get(), "Handler must not run for upstream cancellation")
-            }
-
-        @Test
-        fun `thenApply propagates upstream cancellation`() =
-            runBlocking {
-                val source = CompletableDeferred<Int>()
-                val mapped = source.thenApply { it * 2 }
-
-                val cancel = CancellationException("stop")
-                source.cancel(cancel)
-
-                val seen = assertThrows<CancellationException> { mapped.await() }
-                assertEquals(cancel.message, seen.message)
-                assertTrue(mapped.isCancelled, "Mapped deferred should be cancelled")
-            }
-
-        @Test
-        fun `handler thrown CancellationException is treated as failure while job active`() =
-            runBlocking {
-                val source = CompletableDeferred<String>()
-                val derived = source.handle { _, _ ->
-                    throw CancellationException("oops")
-                }
-
-                source.complete("ok")
-
-                val ex = assertThrows<CancellationException> { derived.await() }
-                assertEquals("oops", ex.message)
-                assertTrue(derived.isCancelled, "CancellationException still marks the deferred as cancelled")
-            }
-
-        @Test
-        fun `handler thrown CancellationException respects prior cancellation`() =
-            runBlocking {
-                val source = CompletableDeferred<String>()
-                val derived = source.thenApply {
-                    throw CancellationException("transform")
-                }
-
-                val preCancel = CancellationException("downstream-cancelled")
-                derived.cancel(preCancel)
-
-                source.complete("value")
-
-                assertTrue(derived.isCancelled, "Derived deferred stays cancelled")
-                val ex = assertThrows<CancellationException> { derived.await() }
-                assertEquals(preCancel.message, ex.message)
-            }
-    }
-
-    @Nested
     inner class ThenApplyTests {
         @Test
         fun `thenApply transforms completed deferred value`() {
@@ -491,19 +414,6 @@ class DeferredExtensionsTest {
                 assertEquals("bad transform", thrown.message)
             }
         }
-
-        @Test
-        fun `thenApply FAST cancelled deferred stays cancelled`() =
-            runBlocking {
-                val cancel = CancellationException("stop")
-                val cancelled = CompletableDeferred<Int>().apply { cancel(cancel) }
-
-                val mapped = cancelled.thenApply { fail("transform should not run") }
-
-                val ex = assertThrows<CancellationException> { mapped.await() }
-                assertEquals("stop", ex.message)
-                assertTrue(mapped.isCancelled)
-            }
     }
 
     @Nested
@@ -955,7 +865,7 @@ class DeferredExtensionsTest {
             }
 
         @Test
-        fun `fallback function throws CancellationException - result fails exceptionally`() =
+        fun `fallback function throws CancellationException - result is cancelled`() =
             runBlocking {
                 val outer = completableDeferred<Int>()
 
@@ -966,7 +876,6 @@ class DeferredExtensionsTest {
                 outer.completeExceptionally(IllegalStateException("boom"))
                 val ex = assertThrows<CancellationException> { result.await() }
                 assertEquals("fallback-fn-cancel", ex.message)
-                assertTrue(result.isCancelled, "CancellationException still marks the deferred cancelled")
             }
 
         @Test
@@ -1159,103 +1068,11 @@ class DeferredExtensionsTest {
     }
 
     @Nested
-    inner class WaitAllDeferredsTests {
-        @Test
-        fun `waitAllDeferreds FAST exceptional input fails`() =
-            runBlocking {
-                val ok = CompletableDeferred<Unit>().apply { complete(Unit) }
-                val err = CompletableDeferred<Unit>().apply { completeExceptionally(IllegalStateException("boom")) }
-
-                val result = waitAllDeferreds(listOf(ok, err))
-
-                val ex = assertThrows<IllegalStateException> { result.await() }
-                assertEquals("boom", ex.message)
-            }
-
-        @Test
-        fun `waitAllDeferreds FAST cancelled input cancels result`() =
-            runBlocking {
-                val cancel = CancellationException("stop")
-                val cancelled = CompletableDeferred<Unit>().apply { cancel(cancel) }
-                val ok = CompletableDeferred<Unit>().apply { complete(Unit) }
-
-                val result = waitAllDeferreds(listOf(cancelled, ok))
-
-                val ex = assertThrows<CancellationException> { result.await() }
-                assertEquals("stop", ex.message)
-                assertTrue(result.isCancelled)
-            }
-
-        @Test
-        fun `waitAllDeferreds SLOW exception cancels others`() =
-            runBlocking {
-                val first = CompletableDeferred<Unit>()
-                val second = CompletableDeferred<Unit>()
-
-                val result = waitAllDeferreds(listOf(first, second))
-
-                first.completeExceptionally(IllegalStateException("boom"))
-
-                val ex = assertThrows<IllegalStateException> { result.await() }
-                assertEquals("boom", ex.message)
-                val cancel = assertThrows<CancellationException> { second.await() }
-                assertEquals("waitAll fail-fast", cancel.message)
-            }
-
-        @Test
-        fun `waitAllDeferreds SLOW cancellation cancels others`() =
-            runBlocking {
-                val first = CompletableDeferred<Unit>()
-                val second = CompletableDeferred<Unit>()
-
-                val result = waitAllDeferreds(listOf(first, second))
-
-                val cancel = CancellationException("stop")
-                first.cancel(cancel)
-
-                val thrown = assertThrows<CancellationException> { result.await() }
-                assertEquals("stop", thrown.message)
-                val other = assertThrows<CancellationException> { second.await() }
-                assertEquals("stop", other.message)
-            }
-
-        // Regression test for a past implementation that folded over inputs and chained `invokeOnCompletion` callbacks.
-        // That approach created a long completion chain proportional to input size; when thousands of deferreds finished together the nested callbacks
-        // blew the call stack and threw a `StackOverflowError`.
-        // `waitAllDeferreds` now uses a fan-in counter/cancellation approach instead of chaining,
-        // so this stress test with many completions verifies we keep the non-recursive behavior.
-        @RepeatedTest(10)
-        fun `waitAllDeferreds completes successfully and does not fail with StackOverflowError`(): Unit =
-            runBlocking(Dispatchers.Default) {
-                var cehThrowable: Throwable? = null
-                val countdownLatch = CountDownLatch(1)
-                val roots = (0..5000).map { CompletableDeferred<Unit>() }
-                roots.forEach { cd ->
-                    CoroutineScope(Dispatchers.Default).launch(
-                        CoroutineExceptionHandler { _, e ->
-                            cehThrowable = e
-                        }
-                    ) {
-                        delay(1L)
-                        cd.complete(Unit)
-                    }
-                }
-
-                waitAllDeferreds(roots).invokeOnCompletion {
-                    countdownLatch.countDown()
-                }
-
-                countdownLatch.await(2, TimeUnit.SECONDS)
-                cehThrowable?.let { throw it }
-            }
-    }
-
-    @Nested
     inner class AsDeferredTests {
         @Test
         fun `asDeferred FAST completed CF`() =
             runBlocking {
-                val cf = CompletableFuture.completedFuture(123)
+                val cf = java.util.concurrent.CompletableFuture.completedFuture(123)
                 val d = cf.asDeferred()
                 assertEquals(123, d.await())
             }
@@ -1263,7 +1080,7 @@ class DeferredExtensionsTest {
         @Test
         fun `asDeferred SLOW later completion`() =
             runBlocking {
-                val cf = CompletableFuture<Int>()
+                val cf = java.util.concurrent.CompletableFuture<Int>()
                 val d = cf.asDeferred()
                 cf.complete(7)
                 assertEquals(7, d.await())
@@ -1272,7 +1089,7 @@ class DeferredExtensionsTest {
         @Test
         fun `asDeferred propagates failure`() =
             runBlocking {
-                val cf = CompletableFuture<Int>()
+                val cf = java.util.concurrent.CompletableFuture<Int>()
                 val d = cf.asDeferred()
                 cf.completeExceptionally(IllegalStateException("x"))
                 val ex = assertThrows<IllegalStateException> { d.await() }
@@ -1282,106 +1099,13 @@ class DeferredExtensionsTest {
         @Test
         fun `asDeferred cancels underlying CF on cancellation`() =
             runBlocking {
-                val cf = CompletableFuture<Int>()
+                val cf = java.util.concurrent.CompletableFuture<Int>()
                 val d = cf.asDeferred()
                 val cancel = CancellationException("stop")
                 d.cancel(cancel)
                 assertTrue(cf.isCancelled)
                 val ex = assertThrows<CancellationException> { d.await() }
                 assertEquals("stop", ex.message)
-            }
-
-        @OptIn(ExperimentalCoroutinesApi::class)
-        @Test
-        fun `asDeferred FAST cancelled future returns cancelled deferred`() =
-            runBlocking {
-                val cf = CompletableFuture<Int>()
-                cf.cancel(true)
-
-                val d = cf.asDeferred()
-
-                val ex = assertThrows<CancellationException> { d.await() }
-                assertTrue(d.isCancelled)
-                assertEquals(ex.message, d.getCompletionExceptionOrNull()?.message)
-            }
-
-        @Test
-        fun `asDeferred FAST exceptional future unwraps cause`() =
-            runBlocking {
-                val ex = IllegalStateException("boom")
-                val cf = CompletableFuture<Int>().apply {
-                    completeExceptionally(ex)
-                }
-
-                val d = cf.asDeferred()
-
-                val thrown = assertThrows<IllegalStateException> { d.await() }
-                assertEquals(ex.message, thrown.message)
-            }
-    }
-
-    @OptIn(InternalCoroutinesApi::class)
-    @Nested
-    inner class ExceptionPropagationTests {
-        @Test
-        fun `maybeRethrowCompletionHandlerException rethrows`() {
-            val ex = CompletionHandlerException("boom", RuntimeException())
-            assertThrows<CompletionHandlerException> { ex.maybeRethrowCompletionHandlerException() }
-        }
-
-        @Test
-        fun `propagateUpstreamFailure rethrows CompletionHandlerException`() {
-            val d = CompletableDeferred<Unit>()
-            val ex = CompletionHandlerException("boom", RuntimeException())
-
-            assertThrows<CompletionHandlerException> { d.propagateUpstreamFailure(ex) }
-        }
-
-        @Test
-        fun `propagateUpstreamFailure forwards cancellation`() =
-            runBlocking {
-                val d = CompletableDeferred<Unit>()
-                val cancel = CancellationException("stop")
-
-                d.propagateUpstreamFailure(cancel)
-
-                assertTrue(d.isCancelled)
-                val thrown = assertThrows<CancellationException> { d.await() }
-                assertEquals("stop", thrown.message)
-            }
-
-        @Test
-        fun `thenApply slow path rethrows CompletionHandlerException`() =
-            runBlocking {
-                val src = completableDeferred<Int>()
-                val derived = src.thenApply { throw CompletionHandlerException("boom", Error("cause")) }
-
-                assertThrows<CompletionHandlerException> { src.complete(1) }
-                Unit
-            }
-
-        @Test
-        fun `thenCompose fast path rethrows CompletionHandlerException`() {
-            val ex = CompletionHandlerException("boom", Error("cause"))
-            val src = completedDeferred(1)
-
-            assertThrows<CompletionHandlerException> {
-                src.thenCompose<Int, Int> { throw ex }
-            }
-        }
-
-        @Test
-        fun `thenCompose nested completion handler Error surfaces as CompletionHandlerException`() =
-            runBlocking {
-                val outer = completableDeferred<Int>()
-                val chained = outer.thenCompose { _ ->
-                    val inner = completableDeferred<Int>()
-                    inner.invokeOnCompletion { throw Error("boom") }
-                    inner.complete(1)
-                    inner.thenCompose { completedDeferred(it + 1) }
-                }
-                assertThrows<CompletionHandlerException> { outer.complete(1) }
-                Unit
             }
     }
 }

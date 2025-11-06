@@ -2,6 +2,7 @@ package viaduct.engine.runtime.instrumentation
 
 import graphql.execution.instrumentation.parameters.InstrumentationFieldFetchParameters
 import graphql.schema.DataFetcher
+import graphql.schema.DataFetchingEnvironment
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLScalarType
 import graphql.schema.GraphQLSchema
@@ -13,11 +14,8 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import viaduct.engine.api.EngineExecutionContext
 import viaduct.engine.api.FieldCheckerDispatcherRegistry
 import viaduct.engine.api.FieldResolverDispatcherRegistry
-import viaduct.engine.api.ViaductDataFetchingEnvironment
-import viaduct.engine.runtime.EngineExecutionContextImpl
 
 internal class ResolverDataFetcherInstrumentationTest {
     private val mockDispathcerRegistry: FieldResolverDispatcherRegistry = mockk()
@@ -75,12 +73,8 @@ internal class ResolverDataFetcherInstrumentationTest {
     }
 
     private fun mockDfEnv(mockParams: InstrumentationFieldFetchParameters) {
-        val dfEnv: ViaductDataFetchingEnvironment = mockk()
+        val dfEnv: DataFetchingEnvironment = mockk()
         every { mockParams.environment } returns dfEnv
-
-        val eec: EngineExecutionContext = mockk()
-        every { eec.fieldScope } returns EngineExecutionContextImpl.FieldExecutionScopeImpl()
-        every { dfEnv.engineExecutionContext } returns eec
 
         val parentType: GraphQLScalarType = mockk()
         every { dfEnv.parentType } returns parentType

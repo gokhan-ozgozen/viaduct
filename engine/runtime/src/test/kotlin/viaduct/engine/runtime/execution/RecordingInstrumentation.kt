@@ -51,7 +51,7 @@ class RecordingInstrumentation :
     ) : RecordingInstrumentationContext<Any>(parameters), FieldFetchingInstrumentationContext
 
     // Recording storage
-    val fetchObjectContexts = ConcurrentLinkedQueue<RecordingInstrumentationContext<Unit>>()
+    val fetchObjectContexts = ConcurrentLinkedQueue<RecordingInstrumentationContext<Map<String, Any?>>>()
     val fieldExecutionContexts = ConcurrentLinkedQueue<RecordingInstrumentationContext<Any>>()
     val fieldFetchingContexts = ConcurrentLinkedQueue<RecordingFieldFetchingInstrumentationContext>()
     val completeObjectContexts = ConcurrentLinkedQueue<RecordingInstrumentationContext<Any>>()
@@ -72,8 +72,8 @@ class RecordingInstrumentation :
     override fun beginFetchObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Unit> {
-        val context = RecordingInstrumentationContext<Unit>(parameters)
+    ): InstrumentationContext<Map<String, Any?>>? {
+        val context = RecordingInstrumentationContext<Map<String, Any?>>(parameters)
         fetchObjectContexts.add(context)
         return context
     }
@@ -81,7 +81,7 @@ class RecordingInstrumentation :
     override fun beginFieldExecution(
         parameters: InstrumentationFieldParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> {
+    ): InstrumentationContext<Any>? {
         val context = RecordingInstrumentationContext<Any>(parameters)
         fieldExecutionContexts.add(context)
         return context
@@ -99,7 +99,7 @@ class RecordingInstrumentation :
     override fun beginCompleteObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> {
+    ): InstrumentationContext<Any>? {
         val context = RecordingInstrumentationContext<Any>(parameters)
         completeObjectContexts.add(context)
         return context

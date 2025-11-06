@@ -27,7 +27,7 @@ import viaduct.engine.runtime.EngineExecutionContextImpl
 import viaduct.engine.runtime.FieldResolutionResult
 import viaduct.engine.runtime.ObjectEngineResultImpl
 import viaduct.engine.runtime.Value
-import viaduct.engine.runtime.context.getLocalContextForType
+import viaduct.engine.runtime.getLocalContextForType
 import viaduct.engine.runtime.mocks.ContextMocks
 import viaduct.engine.runtime.objectEngineResult
 

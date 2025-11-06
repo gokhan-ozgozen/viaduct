@@ -1,0 +1,1 @@
+sourceset_dependencies='{":tenant:tenant-api/main":[]}'

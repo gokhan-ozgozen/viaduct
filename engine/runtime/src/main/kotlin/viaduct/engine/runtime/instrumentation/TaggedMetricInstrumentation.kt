@@ -62,7 +62,9 @@ class TaggedMetricInstrumentation(
     ): InstrumentationContext<ExecutionResult>? {
         // Record the current time.
         val timerSample = Timer.start(meterRegistry)
+
         val timer = Timer.builder(VIADUCT_EXECUTION_METER_NAME)
+
         parameters.executionInput.operationName?.let {
             timer.tag("operation_name", it)
         }
@@ -84,14 +86,12 @@ class TaggedMetricInstrumentation(
     ): InstrumentationContext<ExecutionResult>? {
         val timerSample = Timer.start(meterRegistry)
         val timer = Timer.builder(VIADUCT_OPERATION_METER_NAME)
+
         parameters.executionContext.operationDefinition.name?.let {
             timer.tag("operation_name", it)
         }
 
-        return SimpleInstrumentationContext.whenCompleted { executionResult, throwable ->
-
-            val success = throwable == null && executionResult.isDataPresent
-            timer.tag("success", success.toString())
+        return SimpleInstrumentationContext.whenCompleted { _, _ ->
             timerSample.stop(
                 timer.register(meterRegistry)
             )
@@ -103,6 +103,7 @@ class TaggedMetricInstrumentation(
         state: InstrumentationState?
     ): InstrumentationContext<Any>? {
         val timerSample = Timer.start(meterRegistry)
+
         val timer = Timer.builder(VIADUCT_FIELD_METER_NAME)
         parameters.executionContext.operationDefinition.name?.let {
             timer.tag("operation_name", it)

@@ -15,6 +15,7 @@ import viaduct.engine.api.ObjectEngineResult
 import viaduct.engine.api.UnsetSelectionException
 import viaduct.engine.api.mocks.MockCheckerErrorResult
 import viaduct.engine.runtime.CheckerProxyEngineObjectData
+import viaduct.engine.runtime.CompositeLocalContext
 import viaduct.engine.runtime.FieldErrorsException
 import viaduct.engine.runtime.FieldResolutionResult
 import viaduct.engine.runtime.ObjectEngineResultImpl
@@ -22,7 +23,6 @@ import viaduct.engine.runtime.ObjectEngineResultImpl.Companion.setCheckerValue
 import viaduct.engine.runtime.ObjectEngineResultImpl.Companion.setRawValue
 import viaduct.engine.runtime.ProxyEngineObjectData
 import viaduct.engine.runtime.Value
-import viaduct.engine.runtime.context.CompositeLocalContext
 import viaduct.engine.runtime.mkRss
 import viaduct.engine.runtime.mkSchema
 import viaduct.engine.runtime.select.RawSelectionSetFactoryImpl

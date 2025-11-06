@@ -75,8 +75,7 @@ class QueryPlanTest {
             .build()
 
         Fixture("type Query { x:Int }") {
-            val plan = buildPlan("{x @skip(if:\$var) }")
-            expectThat(plan) {
+            expectThat(buildPlan("{x @skip(if:\$var) }")) {
                 checkEquals(
                     mkQueryPlan(
                         SelectionSet(
@@ -90,7 +89,6 @@ class QueryPlanTest {
                     )
                 )
             }
-            expectThat(plan.variableDefinitions.map { it.name }).equals(listOf("var"))
         }
     }
 
@@ -256,7 +254,6 @@ class QueryPlanTest {
                     )
                 )
             }
-            expectThat(plan.variableDefinitions.map { it.name }).equals(listOf("vara"))
         }
     }
 
@@ -923,8 +920,7 @@ internal fun mkQueryPlan(
     childPlans,
     astSelectionSet = mockk(),
     attribution,
-    executionCondition = ALWAYS_EXECUTE,
-    variableDefinitions = emptyList()
+    executionCondition = ALWAYS_EXECUTE
 )
 
 internal fun mkQPParameters(

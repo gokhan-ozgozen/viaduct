@@ -3,7 +3,6 @@ package viaduct.graphql.utils
 import graphql.schema.GraphQLCompositeType
 import graphql.schema.GraphQLImplementingType
 import graphql.schema.GraphQLInterfaceType
-import graphql.schema.GraphQLNamedType
 import graphql.schema.GraphQLObjectType
 import graphql.schema.GraphQLSchema
 import graphql.schema.GraphQLType
@@ -49,7 +48,6 @@ class GraphQLTypeRelations(schemaTypes: List<GraphQLType>) {
                 is GraphQLObjectType -> {
                     val interfaces = collectInterfaces(t)
                     interfaces.forEach { i ->
-                        if (ignore(i)) return@forEach
                         addEntry(objectToAbstractTypes, t, i)
 
                         // an object is mutually spreadable with all of its interfaces
@@ -69,15 +67,12 @@ class GraphQLTypeRelations(schemaTypes: List<GraphQLType>) {
                     // collect all parent interfaces implemented by this interface type t
                     // foreach parent interface i, add t as a possible type
                     collectInterfaces(t).forEach {
-                        if (ignore(it)) return@forEach
                         addEntry(possibleTypes, it, t)
                     }
                 }
 
                 is GraphQLUnionType -> {
                     t.types.forEach { member ->
-                        if (ignore(member)) return@forEach
-
                         // member is typed as a GraphQLNamedOutputType, which allows type references
                         // to be used before the schema is completely resolved
                         // We can assume that we have a completely resolved schema and that this cast is safe.
@@ -112,8 +107,6 @@ class GraphQLTypeRelations(schemaTypes: List<GraphQLType>) {
             MaskedSet(values.filterIsInstance<GraphQLObjectType>())
         }.toMap()
     }
-
-    private fun ignore(type: GraphQLType): Boolean = type is GraphQLNamedType && type.name == "VIADUCT_IGNORE"
 
     private fun collectInterfaces(type: GraphQLImplementingType): Set<GraphQLInterfaceType> {
         val self = if (type is GraphQLInterfaceType) setOf(type) else emptySet()

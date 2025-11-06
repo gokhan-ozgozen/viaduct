@@ -5,9 +5,9 @@ import graphql.execution.instrumentation.InstrumentationState
 import graphql.execution.instrumentation.parameters.InstrumentationExecutionParameters
 import viaduct.engine.api.instrumentation.ViaductInstrumentationBase
 import viaduct.engine.runtime.EngineExecutionContextImpl
-import viaduct.engine.runtime.context.findLocalContextForType
-import viaduct.engine.runtime.context.isIntrospective
-import viaduct.engine.runtime.context.updateCompositeLocalContext
+import viaduct.engine.runtime.findLocalContextForType
+import viaduct.engine.runtime.isIntrospective
+import viaduct.engine.runtime.updateCompositeLocalContext
 
 class ScopeInstrumentation : ViaductInstrumentationBase() {
     override fun instrumentExecutionContext(

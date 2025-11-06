@@ -1,6 +1,7 @@
 package viaduct.engine.runtime.execution
 
 import graphql.TrivialDataFetcher
+import graphql.execution.CoercedVariables
 import graphql.execution.DataFetcherResult
 import graphql.execution.FetchedValue
 import graphql.execution.ResolveType
@@ -21,15 +22,10 @@ import graphql.schema.LightDataFetcher
 import graphql.util.FpKit
 import java.util.concurrent.CompletionStage
 import java.util.function.Supplier
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import viaduct.deferred.asDeferred
 import viaduct.engine.api.CheckerResult
 import viaduct.engine.api.LazyEngineObjectData
 import viaduct.engine.api.ObjectEngineResult
-import viaduct.engine.api.ParentManagedValue
-import viaduct.engine.api.ResolutionPolicy
 import viaduct.engine.api.engineExecutionContext
 import viaduct.engine.runtime.Cell
 import viaduct.engine.runtime.EngineExecutionContextImpl
@@ -40,12 +36,12 @@ import viaduct.engine.runtime.ObjectEngineResultImpl.Companion.RAW_VALUE_SLOT
 import viaduct.engine.runtime.ObjectEngineResultImpl.Companion.setCheckerValue
 import viaduct.engine.runtime.ObjectEngineResultImpl.Companion.setRawValue
 import viaduct.engine.runtime.Value
-import viaduct.engine.runtime.context.findLocalContextForType
-import viaduct.engine.runtime.exceptions.FieldFetchingException
 import viaduct.engine.runtime.execution.FieldExecutionHelpers.buildDataFetchingEnvironment
 import viaduct.engine.runtime.execution.FieldExecutionHelpers.buildOERKeyForField
 import viaduct.engine.runtime.execution.FieldExecutionHelpers.collectFields
 import viaduct.engine.runtime.execution.FieldExecutionHelpers.executionStepInfoFactory
+import viaduct.engine.runtime.execution.FieldExecutionHelpers.resolveVariables
+import viaduct.engine.runtime.findLocalContextForType
 import viaduct.logging.ifDebug
 import viaduct.utils.slf4j.logger
 
@@ -91,22 +87,13 @@ class FieldResolver(
      * 1. Runs CollectFields on the current uncollected selection set
      * 2. Fires off field fetches for each merged object selection, in parallel
      *
-     * Note on return value: This method returns `Value<Unit>` instead of `Value<Map<String, FieldResolutionResult>>`
-     * because the actual resolved values are stored directly in the `ObjectEngineResult` associated with
-     * the parent object. The `Value<Unit>` serves as a completion signal for the orchestration layer to
-     * know when all nested fetching (including any lazy data or nested objects) has finished.
-     *
-     * If the Value returned by this method is exceptionally completed, that means that there has been
-     * a fatal error in resolving this object, and the parent ObjectEngineResult may be incomplete. Thus, callers of this
-     * method should check for exceptional completion and handle it appropriately.
-     *
      * @param parameters ExecutionParameters containing the execution context and selection set
      * @throws Exception Only if there's a fatal error in the supervisorScope itself
      */
     fun fetchObject(
         objectType: GraphQLObjectType,
         parameters: ExecutionParameters
-    ): Value<Unit> {
+    ) {
         val instrumentationParameters =
             InstrumentationExecutionStrategyParameters(parameters.executionContext, parameters.gjParameters)
         val resolveObjectCtx = nonNullCtx(
@@ -119,20 +106,17 @@ class FieldResolver(
         try {
             val results = collectFields(objectType, parameters)
                 .selections
-                .map { field ->
+                .associate { field ->
                     field as QueryPlan.CollectedField
                     val newParams = parameters.forField(objectType, field)
-                    resolveField(newParams, field)
+                    field.responseKey to resolveField(newParams, field)
                 }
 
             // Wait for all values to be completed.
-            return Value.waitAll(results)
-                .map {
-                    resolveObjectCtx.onCompleted(Unit, null)
-                    it
-                }.recover { t ->
-                    resolveObjectCtx.onCompleted(null, t)
-                    Value.fromThrowable(t)
+            // Errors will be folded into the result map
+            Value.waitAll(results.values)
+                .thenApply { _, t ->
+                    resolveObjectCtx.onCompleted(results, t)
                 }
         } catch (e: Exception) {
             resolveObjectCtx.onCompleted(null, e)
@@ -149,22 +133,13 @@ class FieldResolver(
      *   initiated when the previous selection has completed fetching (either
      *   successfully or exceptionally)
      *
-     * Note on return value: This method returns `Value<Unit>` instead of `Value<Map<String, FieldResolutionResult>>`
-     * because the actual resolved values are stored directly in the `ObjectEngineResult` associated with
-     * the parent object. The `Value<Unit>` serves as a completion signal for the orchestration layer to
-     * know when all nested fetching (including any lazy data or nested objects) has finished.
-     *
-     * If the Value returned by this method is exceptionally completed, that means that there has been
-     * a fatal error in resolving this object, and the parent ObjectEngineResult may be incomplete. Thus, callers of this
-     * method should check for exceptional completion and handle it appropriately.
-     *
      * @param parameters ExecutionParameters containing the execution context and selection set
      * @throws Exception Only if there's a fatal error in the supervisorScope itself
      */
     fun fetchObjectSerially(
         objectType: GraphQLObjectType,
         parameters: ExecutionParameters
-    ): Value<Unit> {
+    ) {
         val instrumentationParameters =
             InstrumentationExecutionStrategyParameters(parameters.executionContext, parameters.gjParameters)
         val resolveObjectCtx = nonNullCtx(
@@ -177,21 +152,24 @@ class FieldResolver(
         try {
             val fields = collectFields(objectType, parameters).selections
             val initial: Value<Unit> = Value.fromValue(Unit)
+            val results = mutableMapOf<String, Value<FieldResolutionResult>>()
 
             // iterate over each field to build a chained execution
             // Each field will kick off only after the previous one completes
-            return fields.fold(initial) { acc, field ->
+            fields.fold(initial) { acc, field ->
                 field as QueryPlan.CollectedField
                 acc.flatMap { _ ->
                     val fieldParameters = parameters.forField(objectType, field)
-                    resolveField(fieldParameters, field)
+                    val value = resolveField(fieldParameters, field)
+                    results.put(field.responseKey, value)
+                    // ignore any errors thrown by the field resolver so that the chained execution can continue
+                    // these field errors will be surfaced during field completion
+                    value.thenApply { _, _ ->
+                        Unit
+                    }
                 }
-            }.map {
-                resolveObjectCtx.onCompleted(Unit, null)
-                it
-            }.recover { t ->
-                resolveObjectCtx.onCompleted(null, t)
-                Value.fromThrowable(t)
+            }.thenApply { _, t ->
+                resolveObjectCtx.onCompleted(results, t)
             }
         } catch (e: Exception) {
             resolveObjectCtx.onCompleted(null, e)
@@ -214,7 +192,7 @@ class FieldResolver(
     fun resolveField(
         parameters: ExecutionParameters,
         field: QueryPlan.CollectedField
-    ): Value<Unit> {
+    ): Value<FieldResolutionResult> {
         field.childPlans.forEach { launchQueryPlan(parameters, it) }
         return executeField(parameters)
     }
@@ -235,16 +213,14 @@ class FieldResolver(
             parameters.executionContext.findLocalContextForType<EngineExecutionContextImpl>()
 
         parameters.launchOnRootScope {
-            val variables = FieldExecutionHelpers.resolveQueryPlanVariables(
-                plan,
+            val variables = resolveVariables(
+                plan.variablesResolvers,
                 parameters.executionStepInfo.arguments,
                 parameters.parentEngineResult,
                 parameters.queryEngineResult,
-                engineExecCtx,
-                parameters.executionContext.graphQLContext,
-                parameters.executionContext.locale
+                engineExecCtx
             )
-            val planParameters = parameters.forChildPlan(plan, variables)
+            val planParameters = parameters.forChildPlan(plan, CoercedVariables(variables))
             fetchObject(plan.parentType as GraphQLObjectType, planParameters)
         }
     }
@@ -263,7 +239,7 @@ class FieldResolver(
      * @param parameters The execution parameters containing field and context information
      */
     @Suppress("UNCHECKED_CAST")
-    private fun executeField(parameters: ExecutionParameters): Value<Unit> {
+    private fun executeField(parameters: ExecutionParameters): Value<FieldResolutionResult> {
         val field = checkNotNull(parameters.field) { "Expected field to be non-null." }
 
         // We're fetching an individual field; the current engine result will always be an ObjectEngineResult
@@ -290,7 +266,7 @@ class FieldResolver(
             val (dataFetcherValue, fieldCheckerResultValue) = fetchField(field, parameters, dataFetchingEnvironmentProvider)
             val result = dataFetcherValue
                 .map { fv ->
-                    buildFieldResolutionResult(parameters, fieldType, fv, parameters.resolutionPolicy)
+                    buildFieldResolutionResult(parameters, fieldType, fv)
                 }.recover { e ->
                     // handle any errors that occurred during building FieldResolutionResult
                     val wrappedException = when (e) {
@@ -321,12 +297,8 @@ class FieldResolver(
         return fieldResolutionResultValue.thenCompose { v, e ->
             fieldInstrumentationCtx.onCompleted(v, e)
             if (e != null) {
-                // if the field resolution failed, don't attempt to fetch lazy data or nested objects
-                // and mark this field as completed
-                Value.fromValue(Unit)
+                Value.fromThrowable(e)
             } else {
-                // otherwise, proceed with lazy data fetching and nested object resolution
-
                 // if the result contains lazy data, begin fetching it
                 maybeFetchLazyData(
                     v!!,
@@ -343,6 +315,7 @@ class FieldResolver(
                         executionStepInfo = executionStepInfoForField,
                     )
                 )
+                Value.fromValue(v)
             }
         }
     }
@@ -370,34 +343,20 @@ class FieldResolver(
         parameters: ExecutionParameters,
         fieldType: GraphQLOutputType,
         fetchedValue: FetchedValue,
-        resolutionPolicy: ResolutionPolicy,
     ): FieldResolutionResult {
         val field = checkNotNull(parameters.field) { "Expected parameters.field to be non-null." }
-        val data = fetchedValue.fetchedValue ?: return FieldResolutionResult.fromFetchedValue(null, fetchedValue, resolutionPolicy)
-
-        // Unwrap data from "ParentManagedValue" if necessary, and set the effective resolution policy
-        var effectiveResolutionPolicy = resolutionPolicy
-        val effectiveData = if (data is ParentManagedValue) {
-            effectiveResolutionPolicy = ResolutionPolicy.PARENT_MANAGED
-            data.value
-        } else {
-            data
-        }
-
-        if (effectiveData == null) {
-            return FieldResolutionResult.fromFetchedValue(null, fetchedValue, effectiveResolutionPolicy)
-        }
+        val data = fetchedValue.fetchedValue ?: return FieldResolutionResult.fromFetchedValue(null, fetchedValue)
 
         // if the type has a non-null wrapper, unwrap one level and recurse
         if (GraphQLTypeUtil.isNonNull(fieldType)) {
-            return buildFieldResolutionResult(parameters, GraphQLTypeUtil.unwrapNonNullAs(fieldType), fetchedValue, effectiveResolutionPolicy)
+            return buildFieldResolutionResult(parameters, GraphQLTypeUtil.unwrapNonNullAs(fieldType), fetchedValue)
         }
 
         // When it's a list, wrap each item in the list
         if (GraphQLTypeUtil.isList(fieldType)) {
             val newFieldType = GraphQLTypeUtil.unwrapOneAs<GraphQLOutputType>(fieldType)
-            val resultIterable = checkNotNull(effectiveData as? Iterable<*>) {
-                "Expected data to be an Iterable, was ${effectiveData.javaClass}."
+            val resultIterable = checkNotNull(data as? Iterable<*>) {
+                "Expected data to be an Iterable, was ${data.javaClass}."
             }
             return FieldResolutionResult.fromFetchedValue(
                 resultIterable.mapIndexed { index, it ->
@@ -407,8 +366,7 @@ class FieldResolver(
                         val itemFieldResolutionResult = buildFieldResolutionResult(
                             parameters,
                             newFieldType,
-                            itemFV,
-                            effectiveResolutionPolicy
+                            itemFV
                         )
                         slotSetter.setRawValue(Value.fromValue(itemFieldResolutionResult))
 
@@ -424,27 +382,25 @@ class FieldResolver(
                         slotSetter.setCheckerValue(typeCheckerResult)
                     }
                 },
-                fetchedValue,
-                effectiveResolutionPolicy,
-                originalSource = effectiveData,
+                fetchedValue
             )
         }
 
         // When it's a leaf value, it doesn't need wrapping
         if (GraphQLTypeUtil.isLeaf(fieldType)) {
-            return FieldResolutionResult.fromFetchedValue(effectiveData, fetchedValue, effectiveResolutionPolicy, originalSource = effectiveData)
+            return FieldResolutionResult.fromFetchedValue(data, fetchedValue)
         }
         // Interface or union type, resolve the type and wrap it
         if (GraphQLTypeUtil.isInterfaceOrUnion(fieldType)) {
             val resolvedType = typeResolver.resolveType(
                 parameters.executionContext,
                 field.mergedField,
-                effectiveData,
+                data,
                 parameters.executionStepInfo,
                 fieldType,
                 fetchedValue.localContext
             )
-            return buildFieldResolutionResult(parameters, resolvedType, fetchedValue, effectiveResolutionPolicy)
+            return buildFieldResolutionResult(parameters, resolvedType, fetchedValue)
         }
         // When it's an object, wrap the whole thing
         if (GraphQLTypeUtil.isObjectType(fieldType)) {
@@ -453,7 +409,7 @@ class FieldResolver(
             } else {
                 ObjectEngineResultImpl.newForType(fieldType as GraphQLObjectType)
             }
-            return FieldResolutionResult.fromFetchedValue(oer, fetchedValue, effectiveResolutionPolicy, originalSource = effectiveData)
+            return FieldResolutionResult.fromFetchedValue(oer, fetchedValue)
         }
         throw IllegalStateException("ObjectEngineResult must wrap a GraphQLObjectType.")
     }
@@ -503,7 +459,6 @@ class FieldResolver(
                         originalSource.resolveData(selections, localExecutionContext)
                         engineResult.resolve()
                     } catch (e: Exception) {
-                        if (e is CancellationException) currentCoroutineContext().ensureActive()
                         engineResult.resolveExceptionally(e)
                     }
                 }
@@ -518,7 +473,6 @@ class FieldResolver(
                 val result = rawValue.getOrThrow()
                 result as? FieldResolutionResult ?: throw IllegalStateException("Expected FieldResolutionResult but got ${result!!::class}")
             }
-
             else -> throw IllegalStateException(
                 "Expected the raw value slot to contain a Value.Sync<FieldResolutionResult>, but got ${rawValue::class}"
             )
@@ -544,28 +498,26 @@ class FieldResolver(
         outputType: GraphQLOutputType,
         field: QueryPlan.CollectedField,
         parameters: ExecutionParameters,
-    ): Value<Unit> {
+    ) {
         // if engineResult is null, then there is no nested object to fetch and we can return early
-        if (fieldResolutionResult.engineResult == null) return Value.fromValue(Unit)
-        return when (outputType) {
+        if (fieldResolutionResult.engineResult == null) return
+        when (outputType) {
             is GraphQLNonNull -> maybeFetchNestedObject(fieldResolutionResult, GraphQLTypeUtil.unwrapOneAs(outputType), field, parameters)
             is GraphQLList -> {
                 val engineResult = checkNotNull(fieldResolutionResult.engineResult as? Iterable<*>) { "Expected iterable engineResult but got ${fieldResolutionResult.engineResult}" }
-                val values = engineResult.mapIndexed { i, item ->
+                engineResult.forEachIndexed { i, item ->
                     check(item is Cell) { "Expected engine result to be a Cell." }
                     val frr = extractFieldResolutionResult(item)
                     val newParams = updateListItemParameters(parameters, i)
                     maybeFetchNestedObject(frr, GraphQLTypeUtil.unwrapOneAs(outputType), field, newParams)
                 }
-                Value.waitAll(values)
             }
-
             else -> {
                 // if engineResult is a scalar or simple value, then no nesting is possible and we can return
-                val oer = fieldResolutionResult.engineResult as? ObjectEngineResultImpl ?: return Value.fromValue(Unit)
+                val oer = fieldResolutionResult.engineResult as? ObjectEngineResultImpl ?: return
                 fetchObject(
                     oer.graphQLObjectType,
-                    parameters.forObjectTraversal(field, oer, fieldResolutionResult.localContext, fieldResolutionResult.originalSource, fieldResolutionResult.resolutionPolicy)
+                    parameters.forObjectTraversal(field, oer, fieldResolutionResult.localContext, fieldResolutionResult.originalSource)
                 )
             }
         }

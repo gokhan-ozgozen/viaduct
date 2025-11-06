@@ -1,4 +1,4 @@
-@file:Suppress("ForbiddenImport", "DEPRECATION")
+@file:Suppress("ForbiddenImport")
 
 package viaduct.service.runtime
 
@@ -24,7 +24,6 @@ import viaduct.engine.api.CheckerExecutorFactory
 import viaduct.engine.api.EngineExecutionContext
 import viaduct.engine.api.FragmentLoader
 import viaduct.engine.api.GraphQLBuildError
-import viaduct.engine.api.TemporaryBypassAccessCheck
 import viaduct.engine.api.TenantAPIBootstrapper.Companion.flatten
 import viaduct.engine.api.ViaductSchema
 import viaduct.engine.api.coroutines.CoroutineInterop
@@ -89,7 +88,7 @@ class StandardViaduct
             private var checkerExecutorFactory: CheckerExecutorFactory? = null
             private var checkerExecutorFactoryCreator: ((ViaductSchema) -> CheckerExecutorFactory)? = null
             @Suppress("DEPRECATION")
-            private var temporaryBypassAccessCheck: TemporaryBypassAccessCheck? = null
+            private var temporaryBypassAccessCheck: viaduct.engine.api.TemporaryBypassAccessCheck? = null
             private var dataFetcherExceptionHandler: DataFetcherExceptionHandler? = null
             private var resolverErrorReporter: ResolverErrorReporter? = null
             private var resolverErrorBuilder: ResolverErrorBuilder? = null
@@ -160,7 +159,7 @@ class StandardViaduct
                 }
 
             @Suppress("DEPRECATION")
-            fun withTemporaryBypassChecker(temporaryBypassAccessCheck: TemporaryBypassAccessCheck): Builder =
+            fun withTemporaryBypassChecker(temporaryBypassAccessCheck: viaduct.engine.api.TemporaryBypassAccessCheck): Builder =
                 apply {
                     this.temporaryBypassAccessCheck = temporaryBypassAccessCheck
                 }

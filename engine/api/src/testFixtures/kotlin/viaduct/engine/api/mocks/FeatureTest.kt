@@ -59,25 +59,16 @@ import viaduct.service.runtime.noderesolvers.ViaductNodeResolverAPIBootstrapper
  * Note that Viaduct turns exceptions thrown by resolvers into field errors.  Thus,
  * assertions placed in resolvers will _not_ cause tests to fail if you don't check
  * query results to esnure that they have no errors.
- *
- * @param engineConfig The [EngineConfigruation] to use for this test. If null, EngineConfiguration.featureTestDefault will be used
  */
 fun MockTenantModuleBootstrapper.runFeatureTest(
     withoutDefaultQueryNodeResolvers: Boolean = false,
     schema: ViaductSchema? = null,
-    engineConfig: EngineConfiguration? = null,
     block: FeatureTest.() -> Unit
 ) {
     val executableSchema = schema ?: fullSchema
-    val engine = toEngineFactory(withoutDefaultQueryNodeResolvers, engineConfig).create(executableSchema, fullSchema = fullSchema)
+    val engine = toEngineFactory(withoutDefaultQueryNodeResolvers).create(executableSchema, fullSchema = fullSchema)
     FeatureTest(engine).block()
 }
-
-val EngineConfiguration.Companion.featureTestDefault: EngineConfiguration
-    get() = EngineConfiguration.default.copy(
-        flagManager = MockFlagManager.Enabled,
-        chainInstrumentationWithDefaults = true,
-    )
 
 /**
  * Convert a MockTenantModuleBootstrapper into an EngineFactory
@@ -89,10 +80,7 @@ val EngineConfiguration.Companion.featureTestDefault: EngineConfiguration
  *
  * and an [EngineConfiguration] constructed with MockFlagManager.Enabled.
  */
-private fun MockTenantModuleBootstrapper.toEngineFactory(
-    withoutDefaultQueryNodeResolvers: Boolean,
-    engineConfig: EngineConfiguration?
-): EngineFactory {
+private fun MockTenantModuleBootstrapper.toEngineFactory(withoutDefaultQueryNodeResolvers: Boolean): EngineFactory {
     val mods = listOf(this)
     val tenantAPIBootstrapper = buildList {
         add(MockTenantAPIBootstrapperBuilder(MockTenantAPIBootstrapper(mods)))
@@ -111,7 +99,9 @@ private fun MockTenantModuleBootstrapper.toEngineFactory(
         validator,
         checkerExecutorFactory
     ).create(fullSchema)
-    val config = engineConfig ?: EngineConfiguration.featureTestDefault
+    val config = EngineConfiguration.default.copy(
+        flagManager = MockFlagManager.Enabled,
+    )
     return EngineFactory(config, dispatcherRegistry)
 }
 

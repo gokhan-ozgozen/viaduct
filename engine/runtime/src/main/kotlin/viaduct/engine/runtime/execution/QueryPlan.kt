@@ -12,7 +12,6 @@ import graphql.language.NodeUtil
 import graphql.language.OperationDefinition
 import graphql.language.SelectionSet as GJSelectionSet
 import graphql.language.SourceLocation
-import graphql.language.VariableDefinition
 import graphql.schema.GraphQLCompositeType
 import graphql.schema.GraphQLNamedOutputType
 import graphql.schema.GraphQLObjectType
@@ -33,8 +32,6 @@ import viaduct.engine.api.ViaductSchema
 import viaduct.engine.api.gj
 import viaduct.engine.runtime.DispatcherRegistry
 import viaduct.engine.runtime.execution.QueryPlan.Field
-import viaduct.graphql.utils.asNamedElement
-import viaduct.graphql.utils.collectVariableDefinitions
 import viaduct.graphql.utils.collectVariableReferences
 import viaduct.utils.collections.MaskedSet
 
@@ -45,7 +42,6 @@ import viaduct.utils.collections.MaskedSet
  *
  * @param childPlans child QueryPlan objects. These will be resolved before any
  * selections in this QueryPlan are resolved.
- * @param variableDefinitions Pre-computed variable definitions for this plan.
  */
 data class QueryPlan(
     val selectionSet: SelectionSet,
@@ -56,7 +52,6 @@ data class QueryPlan(
     val astSelectionSet: GJSelectionSet,
     val attribution: ExecutionAttribution? = ExecutionAttribution.DEFAULT,
     val executionCondition: QueryPlanExecutionCondition,
-    val variableDefinitions: List<VariableDefinition>,
 ) {
     /**
      * Configuration for building a QueryPlan.
@@ -366,12 +361,6 @@ private class QueryPlanBuilder(
             )
         )
 
-        val variableDefinitions = selectionSet.collectVariableDefinitions(
-            parameters.schema.schema,
-            parentType.asNamedElement().name,
-            fragmentsByName
-        )
-
         return QueryPlan(
             selectionSet = state.selectionSet,
             fragments = QueryPlan.Fragments(fragments.toMap()),
@@ -380,8 +369,7 @@ private class QueryPlanBuilder(
             childPlans = state.childPlans,
             astSelectionSet = selectionSet,
             attribution = attribution,
-            executionCondition = executionCondition,
-            variableDefinitions = variableDefinitions
+            executionCondition = executionCondition
         )
     }
 

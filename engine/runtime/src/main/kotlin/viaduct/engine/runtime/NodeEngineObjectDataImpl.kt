@@ -2,11 +2,8 @@ package viaduct.engine.runtime
 
 import graphql.schema.GraphQLObjectType
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.async
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.supervisorScope
 import viaduct.engine.api.CheckerExecutor
 import viaduct.engine.api.EngineExecutionContext
@@ -97,9 +94,6 @@ class NodeEngineObjectDataImpl(
             }
             return true
         } catch (e: Exception) {
-            // don't consider real CancellationException as failures. Just rethrow
-            if (e is CancellationException) currentCoroutineContext().ensureActive()
-
             resolving.completeExceptionally(e)
             throw e
         }

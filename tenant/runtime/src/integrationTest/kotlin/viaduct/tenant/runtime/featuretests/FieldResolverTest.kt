@@ -172,7 +172,7 @@ class FieldResolverTest {
                 override fun beginFetchObject(
                     parameters: InstrumentationExecutionStrategyParameters,
                     state: InstrumentationState?
-                ): InstrumentationContext<Unit> {
+                ): InstrumentationContext<Map<String, Any?>>? {
                     // Mark that instrumentation began for this fetchObject.
                     instrumentationBegun.countDown()
                     return SimpleInstrumentationContext.whenCompleted { _, _ ->
@@ -242,7 +242,7 @@ class FieldResolverTest {
                 override fun beginFetchObject(
                     parameters: InstrumentationExecutionStrategyParameters,
                     state: InstrumentationState?
-                ): InstrumentationContext<Unit> {
+                ): InstrumentationContext<Map<String, Any?>>? {
                     // Mark that instrumentation began for this fetchObject.
                     instrumentationBegun.countDown()
                     return SimpleInstrumentationContext.whenCompleted { _, _ ->

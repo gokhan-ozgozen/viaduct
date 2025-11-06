@@ -141,7 +141,7 @@ class VariablesResolverTest {
 
     @Disabled("Disabled until validation of variables-provider behavior is in engine.")
     @Test
-    fun `invalid variable reference`() {
+    fun `invalid variable reference`() =
         assertThrows<Exception> {
             MockTenantModuleBootstrapper("extend type Query { foo: Int!, bar(x:Int!): Int! }") {
                 field("Query" to "foo") {
@@ -157,29 +157,4 @@ class VariablesResolverTest {
                 }
             }
         }
-    }
-
-    @Test
-    fun `variables are coerced`() {
-        MockTenantModuleBootstrapper("extend type Query { foo: Int, bar(x: [Int!]): Int! }") {
-            field("Query" to "foo") {
-                resolver {
-                    objectSelections("bar(x:\$varx)") {
-                        variables("varx") { _ -> mapOf("varx" to 2) }
-                    }
-                    querySelections("bar(x:\$varx)") {
-                        variables("varx") { _ -> mapOf("varx" to 3) }
-                    }
-                    fn { _, obj, q, _, _ -> obj.fetchAs<Int>("bar") + q.fetchAs<Int>("bar") }
-                }
-            }
-            field("Query" to "bar") {
-                resolver {
-                    fn { args, _, _, _, _ -> args.getAs<List<Int>>("x").sum() * 5 }
-                }
-            }
-        }.runFeatureTest {
-            runQuery("{ foo }").assertJson("{data: {foo: 25}}")
-        }
-    }
 }

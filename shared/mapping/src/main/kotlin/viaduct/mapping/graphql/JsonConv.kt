@@ -1,14 +1,15 @@
 package viaduct.mapping.graphql
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import graphql.schema.GraphQLCompositeType
 import graphql.schema.GraphQLEnumType
 import graphql.schema.GraphQLInputObjectType
+import graphql.schema.GraphQLInterfaceType
 import graphql.schema.GraphQLList
 import graphql.schema.GraphQLNonNull
 import graphql.schema.GraphQLObjectType
 import graphql.schema.GraphQLScalarType
 import graphql.schema.GraphQLType
+import graphql.schema.GraphQLUnionType
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetTime
@@ -17,36 +18,18 @@ import viaduct.engine.api.ViaductSchema
 /**
  * Factory methods for [Conv]s that map between Json and [IR] representations.
  *
- * @see JsonConv.invoke
+ * @see invoke
  */
 object JsonConv {
     private val objectMapper = ObjectMapper()
     @Suppress("ObjectPropertyNaming")
     private val __typename = "__typename"
 
-    enum class AddJsonTypenameField {
-        /**
-         * For all input and output graphql objects, a __typename field
-         * will always be added to the emitted json, even when __typename is not
-         * in the original [IR.Value.Object] field values.
-         */
-        Always,
-
-        /**
-         * A __typename field will never be added to the emitted json for
-         * input and output graphql objects. Though if __typename was in
-         * the original [IR.Value.Object] field values then it will be present
-         * in the converted json.
-         */
-        Never
-    }
-
     /** create a [Conv] for the given [type] */
     operator fun invoke(
         schema: ViaductSchema,
-        type: GraphQLType,
-        addJsonTypenameField: AddJsonTypenameField = AddJsonTypenameField.Always
-    ): Conv<String, IR.Value> = Builder(schema, addJsonTypenameField).build(type)
+        type: GraphQLType
+    ): Conv<String, IR.Value> = Builder(schema).build(type)
 
     private fun json(inner: Conv<Any?, IR.Value>): Conv<String, IR.Value> =
         Conv(
@@ -55,20 +38,21 @@ object JsonConv {
             "json-$inner"
         )
 
-    private fun list(inner: Conv<Any?, IR.Value>): Conv<List<Any?>, IR.Value.List> =
+    private fun list(inner: Conv<Any?, IR.Value>): Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.List(it.map(inner)) },
-            inverse = { it.value.map(inner::invert) },
+            forward = { IR.Value.List((it as List<*>).map(inner)) },
+            inverse = { (it as IR.Value.List).value.map(inner::invert) },
             "list-$inner"
         )
 
     private fun obj(
         name: String,
-        fieldConvs: Map<String, Conv<Any?, IR.Value>>,
-        addJsonTypenameField: AddJsonTypenameField
-    ): Conv<Map<String, Any?>, IR.Value.Object> =
+        fieldConvs: Map<String, Conv<Any?, IR.Value>>
+    ): Conv<Any?, IR.Value> =
         Conv(
             forward = {
+                @Suppress("UNCHECKED_CAST")
+                it as Map<String, Any?>
                 val irFieldValues = it.toList().mapNotNull { (k, v) ->
                     val conv = fieldConvs[k] ?: return@mapNotNull null
                     k to conv(v)
@@ -76,13 +60,10 @@ object JsonConv {
                 IR.Value.Object(name, irFieldValues)
             },
             inverse = {
-                val result = it.fields.mapValues { (k, v) ->
+                it as IR.Value.Object
+                it.fields.mapValues { (k, v) ->
                     val fieldConv = requireNotNull(fieldConvs[k])
                     fieldConv.invert(v)
-                }
-                when (addJsonTypenameField) {
-                    AddJsonTypenameField.Always -> result + (__typename to name)
-                    AddJsonTypenameField.Never -> result
                 }
             },
             "obj-$name"
@@ -90,10 +71,12 @@ object JsonConv {
 
     private fun abstract(
         name: String,
-        concretes: Map<String, Conv<Map<String, Any?>, IR.Value.Object>>
-    ): Conv<Map<String, Any?>, IR.Value.Object> =
+        concretes: Map<String, Conv<Any?, IR.Value>>
+    ): Conv<Any?, IR.Value> =
         Conv(
             forward = {
+                @Suppress("UNCHECKED_CAST")
+                it as Map<String, Any?>
                 val typeName = requireNotNull(it[__typename]) {
                     "Cannot resolve concrete type for abstract type $name"
                 }
@@ -101,88 +84,83 @@ object JsonConv {
                 concrete(it)
             },
             inverse = {
+                it as IR.Value.Object
                 val concrete = requireNotNull(concretes[it.name])
-                val result = concrete.invert(it)
+                @Suppress("UNCHECKED_CAST")
+                val result = concrete.invert(it) as Map<String, Any?>
                 result + (__typename to it.name)
             },
             "abstract-$name"
         )
 
-    private val boolean: Conv<Boolean, IR.Value.Boolean> =
+    private val boolean: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Boolean(it) },
-            inverse = { it.value },
+            forward = { IR.Value.Boolean(it as Boolean) },
+            inverse = { (it as IR.Value.Boolean).value },
             "boolean"
         )
 
-    private val int: Conv<Number, IR.Value.Number> =
+    private val int: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Number((it).toInt()) },
-            inverse = { it.int },
+            forward = { IR.Value.Number((it as Number).toInt()) },
+            inverse = { (it as IR.Value.Number).int },
             "int"
         )
 
-    private val byte: Conv<Number, IR.Value.Number> =
+    private val byte: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Number((it).toByte()) },
-            inverse = { it.byte },
+            forward = { IR.Value.Number((it as Number).toByte()) },
+            inverse = { (it as IR.Value.Number).byte },
             "byte"
         )
 
-    private val short: Conv<Number, IR.Value.Number> =
+    private val short: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Number((it).toShort()) },
-            inverse = { it.short },
+            forward = { IR.Value.Number((it as Number).toShort()) },
+            inverse = { (it as IR.Value.Number).short },
             "short"
         )
 
-    private val long: Conv<Number, IR.Value.Number> =
+    private val long: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Number((it).toLong()) },
-            inverse = { it.long },
+            forward = { IR.Value.Number((it as Number).toLong()) },
+            inverse = { (it as IR.Value.Number).long },
             "long"
         )
 
-    private val float: Conv<Number, IR.Value.Number> =
+    private val float: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Number(it.toDouble()) },
-            inverse = { it.double },
+            forward = { IR.Value.Number((it as Number).toDouble()) },
+            inverse = { (it as IR.Value.Number).double },
             "float"
         )
 
-    private val string: Conv<String, IR.Value.String> =
+    private val string: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.String(it) },
-            inverse = { it.value },
+            forward = { IR.Value.String(it as String) },
+            inverse = { (it as IR.Value.String).value },
             "string"
         )
 
-    private val date: Conv<String, IR.Value.Time> =
+    private val date: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Time(LocalDate.parse(it)) },
-            inverse = { it.localDate.toString() },
+            forward = { IR.Value.Time(LocalDate.parse(it as String)) },
+            inverse = { (it as IR.Value.Time).localDate.toString() },
             "date"
         )
 
-    private val instant: Conv<String, IR.Value.Time> =
+    private val instant: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Time(Instant.parse(it)) },
-            inverse = { it.instant.toString() },
+            forward = { IR.Value.Time(Instant.parse(it as String)) },
+            inverse = { (it as IR.Value.Time).instant.toString() },
             "instant"
         )
 
-    private val time: Conv<String, IR.Value.Time> =
+    private val time: Conv<Any?, IR.Value> =
         Conv(
-            forward = { IR.Value.Time(OffsetTime.parse(it)) },
-            inverse = { it.offsetTime.toString() },
+            forward = { IR.Value.Time(OffsetTime.parse(it as String)) },
+            inverse = { (it as IR.Value.Time).offsetTime.toString() },
             "time"
-        )
-
-    private val backingData: Conv<Any?, IR.Value> =
-        Conv(
-            forward = { IR.Value.Null },
-            inverse = { null },
-            "backingData"
         )
 
     private fun enum(
@@ -233,7 +211,7 @@ object JsonConv {
         )
 
     /** A builder that can recursively build a single conv */
-    private class Builder(val schema: ViaductSchema, val addJsonTypenameField: AddJsonTypenameField) {
+    private class Builder(val schema: ViaductSchema) {
         private val convMemo = ConvMemo()
 
         fun build(type: GraphQLType): Conv<String, IR.Value> =
@@ -253,27 +231,30 @@ object JsonConv {
                 is GraphQLList -> list(mk(type.wrappedType))
                 is GraphQLObjectType ->
                     convMemo.buildIfAbsent(type.name) {
-                        val fieldConvs: Map<String, Conv<Any?, IR.Value>> = type.fields
-                            .associate { f ->
-                                f.name to mk(f.type)
-                            } + (__typename to string.asAnyConv)
-                        obj(type.name, fieldConvs, addJsonTypenameField)
+                        val fieldConvs = type.fields.associate { f -> f.name to mk(f.type) } +
+                            (__typename to string)
+                        obj(type.name, fieldConvs)
                     }
 
-                is GraphQLCompositeType ->
+                is GraphQLUnionType ->
                     convMemo.buildIfAbsent(type.name) {
-                        val concretes = schema.rels.possibleObjectTypes(type).associate { type ->
-                            @Suppress("UNCHECKED_CAST")
-                            val concrete = mk(type) as Conv<Map<String, Any?>, IR.Value.Object>
-                            type.name to concrete
-                        }
+                        val concretes = type.types.associate { type -> type.name to mk(type) }
+                        abstract(type.name, concretes)
+                    }
+
+                is GraphQLInterfaceType ->
+                    convMemo.buildIfAbsent(type.name) {
+                        val concretes = schema.schema.getImplementations(type)
+                            .associate { type ->
+                                type.name to mk(type)
+                            }
                         abstract(type.name, concretes)
                     }
 
                 is GraphQLInputObjectType ->
                     convMemo.buildIfAbsent(type.name) {
                         val fieldConvs = type.fields.associate { f -> f.name to mk(f.type) }
-                        obj(type.name, fieldConvs, addJsonTypenameField)
+                        obj(type.name, fieldConvs)
                     }
 
                 is GraphQLEnumType -> enum(type.name, type.values.map { it.name }.toSet())
@@ -289,7 +270,6 @@ object JsonConv {
                     "Byte" -> byte
                     "Float" -> float
                     "ID", "String", "JSON" -> string
-                    "BackingData" -> backingData
                     else ->
                         throw IllegalArgumentException("Cannot generate JsonConv for type $type")
                 }
@@ -299,13 +279,10 @@ object JsonConv {
             }
 
             return if (isNullable) {
-                nullable(conv.asAnyConv)
+                nullable(conv)
             } else {
-                conv.asAnyConv
+                conv
             }
         }
-
-        @Suppress("UNCHECKED_CAST")
-        val Conv<*, *>.asAnyConv: Conv<Any?, IR.Value> get() = this as Conv<Any?, IR.Value>
     }
 }

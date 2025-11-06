@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package viaduct.engine
 
 import graphql.execution.DataFetcherExceptionHandler
@@ -7,7 +5,6 @@ import graphql.execution.instrumentation.Instrumentation
 import io.micrometer.core.instrument.MeterRegistry
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import viaduct.engine.api.FragmentLoader
-import viaduct.engine.api.TemporaryBypassAccessCheck
 import viaduct.engine.api.coroutines.CoroutineInterop
 import viaduct.engine.api.fragment.ViaductExecutableFragmentParser
 import viaduct.engine.api.instrumentation.resolver.ViaductResolverInstrumentation
@@ -30,7 +27,7 @@ data class EngineConfiguration(
     val fragmentLoader: FragmentLoader = ViaductFragmentLoader(ViaductExecutableFragmentParser()),
     val flagManager: FlagManager = FlagManager.default,
     @Suppress("DEPRECATION")
-    val temporaryBypassAccessCheck: TemporaryBypassAccessCheck = TemporaryBypassAccessCheck.Default,
+    val temporaryBypassAccessCheck: viaduct.engine.api.TemporaryBypassAccessCheck = viaduct.engine.api.TemporaryBypassAccessCheck.Default,
     val resolverErrorReporter: ResolverErrorReporter = ResolverErrorReporter.NoOpResolverErrorReporter,
     val resolverErrorBuilder: ResolverErrorBuilder = ResolverErrorBuilder.NoOpResolverErrorBuilder,
     val dataFetcherExceptionHandler: DataFetcherExceptionHandler = ViaductDataFetcherExceptionHandler(

@@ -160,7 +160,6 @@ class MockFieldExecutionContext<T : Object, Q : Query, A : Arguments, O : Compos
     override val objectValue: T,
     override val queryValue: Q,
     override val arguments: A,
-    override val requestContext: Any?,
     private val selectionsValue: SelectionSet<O>,
     internalContext: InternalContext,
     queryResults: PrebakedResults<Query> = EmptyPrebakedResults<Query>(),
@@ -174,7 +173,6 @@ class MockFieldExecutionContext<T : Object, Q : Query, A : Arguments, O : Compos
 class MockMutationFieldExecutionContext<Q : Query, A : Arguments, O : CompositeOutput>(
     override val queryValue: Q,
     override val arguments: A,
-    override val requestContext: Any?,
     private val selectionsValue: SelectionSet<O>,
     internalContext: InternalContext,
     queryResults: PrebakedResults<Query> = EmptyPrebakedResults<Query>(),

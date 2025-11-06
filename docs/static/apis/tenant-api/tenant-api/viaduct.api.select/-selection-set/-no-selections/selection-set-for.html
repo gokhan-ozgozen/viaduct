@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>selectionSetFor</title>
+    <link href="../../../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async="async"></script>
+<script type="text/javascript" src="../../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../../styles/style.css" rel="Stylesheet">
+<link href="../../../../styles/main.css" rel="Stylesheet">
+<link href="../../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../../ui-kit/ui-kit.min.js" defer="defer"></script>
+<script type="text/javascript" src="../../../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+<link href="../../../../images/logo-only-white.svg">
+<link href="../../../../styles/kdoc-styles.css" rel="Stylesheet">
+</head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+            <a class="library-name--link" href="../../../../index.html">
+                    tenant-api
+            </a>
+        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle"
+                type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+0.2.3-skevy-1-SNAPSHOT        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active=""
+                        data-filter=":tenant:tenant-api/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox"
+                        data-role="dropdown-toggle"
+                        aria-controls="platform-tags-listbox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-label="Toggle source sets"
+                ></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":tenant:tenant-api/main"
+                                       data-filter=":tenant:tenant-api/main"/>
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+                <a class="navigation-controls--btn navigation-controls--btn_homepage" id="homepage-link"
+                   href="https://airbnb.io/viaduct"></a>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button"
+                    type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list"
+                        data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    tenant-api
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="member" id="content" pageIds="tenant-api::viaduct.api.select/SelectionSet.NoSelections/selectionSetFor/#viaduct.api.reflect.CompositeField[TypeParam(bounds=[viaduct.api.types.CompositeOutput.NotComposite]),TypeParam(bounds=[viaduct.api.types.CompositeOutput])]/PointingToDeclaration//-1049674059">
+  <div class="breadcrumbs"><a href="../../../../index.html">tenant-api</a><span class="delimiter">/</span><a href="../../index.html">viaduct.api.select</a><span class="delimiter">/</span><a href="../index.html">SelectionSet</a><span class="delimiter">/</span><a href="index.html">NoSelections</a><span class="delimiter">/</span><span class="current">selectionSetFor</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span>selection</span><wbr></wbr><span>Set</span><wbr></wbr><span><span>For</span></span></h1>
+  </div>
+  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":tenant:tenant-api/main"><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="selection-set-for.html">U</a><span class="token operator"> : </span><a href="../../../viaduct.api.types/-composite-output/-not-composite/index.html">CompositeOutput.NotComposite</a><span class="token punctuation">, </span><a href="selection-set-for.html">R</a><span class="token operator"> : </span><a href="../../../viaduct.api.types/-composite-output/index.html">CompositeOutput</a><span class="token operator">&gt; </span><a href="selection-set-for.html"><span class="token function">selectionSetFor</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">field<span class="token operator">: </span><a href="../../../viaduct.api.reflect/-composite-field/index.html">CompositeField</a><span class="token operator">&lt;</span><a href="selection-set-for.html">U</a><span class="token punctuation">, </span><a href="selection-set-for.html">R</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../index.html">SelectionSet</a><span class="token operator">&lt;</span><a href="selection-set-for.html">R</a><span class="token operator">&gt;</span><span class="clearfix"><span class="floating-right">(<a href="https://github.com/airbnb/viaduct/tree/v0.2.3-skevy-1-SNAPSHOT/tenant/api/src/main/kotlin/viaduct/api/select/SelectionSet.kt#L201">source</a>)</span></span></div><p class="paragraph">Return a SelectionSet describing the selections at the provided field. If the current SelectionSet does not include the provided field, then an empty SelectionSet will be returned.</p><p class="paragraph">This method can be used to extract selections for a field belonging to any subtype of the current type. This allows deriving subselections of a field from a union member if the current selections are on a union type, or deriving subselections of an interface implementation if the current selections are on an interface type.</p><p class="paragraph"><strong>Examples</strong></p><p class="paragraph">Given these type definitions:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">interface Node { id: ID! }<br>type Foo implements Node { id: ID!, bar: Bar }<br>type Bar implements Node { id: ID!, foo: Foo }</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">And these selections on Node:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">... on Foo {<br>  bar {<br>    id<br>    foo { id }<br>  }<br>}<br>... on Foo {<br>  bar { __typename }<br>}</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">Then <code class="lang-kotlin">selectionSetFor</code> will have the following behavior:</p><ul><li><p class="paragraph"><code class="lang-kotlin">selectionSetFor(Foo.bar)</code> will return a <code class="lang-kotlin">SelectionSet&lt;Bar&gt;</code> with a selections for <code class="lang-kotlin">id, foo { id }, __typename</code>, because these are the merged selections for the Foo.bar field under Node.</p></li><li><p class="paragraph"><code class="lang-kotlin">selectionSetFor(Bar.foo)</code> will return a <code class="lang-kotlin">SelectionSet&lt;Foo&gt;</code> that is empty, because even though Bar.foo is selected somewhere in the SelectionSet, it is not included in the immediate children of the current selections.</p></li></ul><hr><div class="symbol monospace"><span class="token keyword">open </span><span class="token keyword">override </span><span class="token keyword">fun </span><span class="token operator">&lt;</span><a href="selection-set-for.html">U</a><span class="token operator"> : </span><a href="../../../viaduct.api.types/-composite-output/-not-composite/index.html">CompositeOutput.NotComposite</a><span class="token operator">&gt; </span><a href="selection-set-for.html"><span class="token function">selectionSetFor</span></a><span class="token punctuation">(</span><span class="parameters "><span class="parameter ">type<span class="token operator">: </span><a href="../../../viaduct.api.reflect/-type/index.html">Type</a><span class="token operator">&lt;</span><a href="selection-set-for.html">U</a><span class="token operator">&gt;</span></span></span><span class="token punctuation">)</span><span class="token operator">: </span><a href="../index.html">SelectionSet</a><span class="token operator">&lt;</span><a href="selection-set-for.html">U</a><span class="token operator">&gt;</span><span class="clearfix"><span class="floating-right">(<a href="https://github.com/airbnb/viaduct/tree/v0.2.3-skevy-1-SNAPSHOT/tenant/api/src/main/kotlin/viaduct/api/select/SelectionSet.kt#L204">source</a>)</span></span></div><p class="paragraph">Return a SelectionSet that is a projection of the selections on the provided type. The returned SelectionSet may include fields that are selected on a parent interface or union -- if you need to know if a projected SelectionSet contains non-inherited selections for a type, see <a href="requests-type.html">requestsType</a></p><p class="paragraph"><strong>Examples</strong></p><p class="paragraph">Given these type definitions:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">interface Node { id: ID! }<br>type Foo implements Node { id: ID!, name: String }<br>type Bar implements Node { id: ID! }</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">And these selections on Node:</p><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">id<br>... on Foo { name }</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph">Then <code class="lang-kotlin">selectionSetFor</code> will have the following behavior:</p><ul><li><p class="paragraph"><code class="lang-kotlin">selectionSetFor(Node)</code> returns the current SelectionSet because the provided type is the same as the current type</p></li><li><p class="paragraph"><code class="lang-kotlin">selectionSetFor(Foo)</code> returns a SelectionSet<Foo> with selections <code class="lang-kotlin">id name</code>, because the projection for type Foo includes the selections on the parent interface Node and the inline fragment selections on Foo</p></li><li><p class="paragraph"><code class="lang-kotlin">selectionSetFor(Bar)</code> returns a SelectionSet<Bar> with selections on <code class="lang-kotlin">id</code>, because the projection for type Bar includes the selections on the parent interface Node</p></li></ul></div></div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>&copy; 2025 Airbnb, Inc.</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

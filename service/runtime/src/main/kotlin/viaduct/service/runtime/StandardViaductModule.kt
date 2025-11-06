@@ -1,5 +1,3 @@
-@file:Suppress("DEPRECATION")
-
 package viaduct.service.runtime
 
 import com.google.inject.AbstractModule
@@ -14,7 +12,6 @@ import viaduct.engine.api.CheckerExecutorFactory
 import viaduct.engine.api.CheckerExecutorFactoryCreator
 import viaduct.engine.api.FragmentLoader
 import viaduct.engine.api.NoOpCheckerExecutorFactoryImpl
-import viaduct.engine.api.TemporaryBypassAccessCheck
 import viaduct.engine.api.TenantAPIBootstrapper
 import viaduct.engine.api.coroutines.CoroutineInterop
 import viaduct.engine.api.fragment.ExecutableFragmentParser
@@ -47,7 +44,7 @@ class StandardViaductModule(
         bind(FlagManager::class.java).toInstance(engineConfiguration.flagManager)
         bind(DataFetcherExceptionHandler::class.java).toInstance(engineConfiguration.dataFetcherExceptionHandler)
         @Suppress("DEPRECATION")
-        bind(TemporaryBypassAccessCheck::class.java).toInstance(engineConfiguration.temporaryBypassAccessCheck)
+        bind(viaduct.engine.api.TemporaryBypassAccessCheck::class.java).toInstance(engineConfiguration.temporaryBypassAccessCheck)
         bind(ResolverErrorReporter::class.java).toInstance(engineConfiguration.resolverErrorReporter)
         bind(ResolverErrorBuilder::class.java).toInstance(engineConfiguration.resolverErrorBuilder)
         bind(TenantAPIBootstrapper::class.java).toInstance(tenantBootstrapper)

@@ -96,8 +96,7 @@ object TestDomain1 : Domain<TestDomain1.Value.Object> {
         data class Object(val name: String, val fields: Map<String, Value>) : Value
     }
 
-    override val conv: Conv<Value.Object, IR.Value.Object> =
-        Conv(::toIRObject, ::fromIRObject)
+    override fun objectToIR(): Conv<Value.Object, IR.Value.Object> = Conv(::toIRObject, ::fromIRObject)
 
     private fun toIRObject(obj: Value.Object): IR.Value.Object {
         // example of name transformations
@@ -162,8 +161,8 @@ object TestDomain2 : Domain<TestDomain2.Value.Object> {
         }
     )
 
-    override val conv: Conv<Value.Object, IR.Value.Object> =
-        Conv(
+    override fun objectToIR(): Conv<Value.Object, IR.Value.Object> =
+        Conv<Value.Object, IR.Value.Object>(
             forward = { obj ->
                 IR.Value.Object(obj.name, obj.fields.mapValues { (_, v) -> valueConv(v) })
             },

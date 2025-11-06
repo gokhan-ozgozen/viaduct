@@ -17,7 +17,6 @@ import viaduct.api.types.NodeObject
 import viaduct.api.types.Object
 import viaduct.api.types.Query
 import viaduct.engine.api.CheckerExecutor
-import viaduct.engine.api.CheckerMetadata
 import viaduct.engine.api.CheckerResult
 import viaduct.engine.api.Coordinate
 import viaduct.engine.api.EngineExecutionContext
@@ -121,8 +120,7 @@ class NodeBatchResolverStub(
 
 class CheckerExecutorStub(
     override val requiredSelectionSets: Map<String, RequiredSelectionSet?> = emptyMap(),
-    private val executeFn: suspend (Map<String, Any?>, objectDataMap: Map<String, EngineObjectData>) -> Unit,
-    override val checkerMetadata: CheckerMetadata
+    private val executeFn: suspend (Map<String, Any?>, objectDataMap: Map<String, EngineObjectData>) -> Unit
 ) : CheckerExecutor {
     override suspend fun execute(
         arguments: Map<String, Any?>,

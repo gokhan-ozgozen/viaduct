@@ -155,7 +155,7 @@ open class ViaductInstrumentationAdapter(
     override fun beginFetchObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Unit> =
+    ): InstrumentationContext<Map<String, Any?>>? =
         if (viaductInstrumentation is IViaductInstrumentation.WithBeginFetchObject) {
             viaductInstrumentation.beginFetchObject(parameters, state)
         } else {
@@ -165,7 +165,7 @@ open class ViaductInstrumentationAdapter(
     override fun beginCompleteObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> =
+    ): InstrumentationContext<Any>? =
         if (viaductInstrumentation is IViaductInstrumentation.WithBeginCompleteObject) {
             viaductInstrumentation.beginCompleteObject(parameters, state)
         } else {

@@ -1,5 +1,4 @@
 @file:OptIn(ExperimentalCoroutinesApi::class)
-@file:Suppress("DEPRECATION")
 
 package viaduct.engine.runtime.execution
 
@@ -19,8 +18,8 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import viaduct.deferred.asDeferred
 import viaduct.engine.api.CheckerResult
-import viaduct.engine.api.TemporaryBypassAccessCheck
 import viaduct.engine.runtime.Cell
+import viaduct.engine.runtime.CompositeLocalContext
 import viaduct.engine.runtime.FieldResolutionResult
 import viaduct.engine.runtime.ObjectEngineResultImpl
 import viaduct.engine.runtime.ObjectEngineResultImpl.Companion.ACCESS_CHECK_SLOT
@@ -76,7 +75,8 @@ import viaduct.engine.runtime.execution.FieldExecutionHelpers.executionStepInfoF
  */
 class FieldCompleter(
     private val dataFetcherExceptionHandler: DataFetcherExceptionHandler,
-    private val temporaryBypassAccessCheck: TemporaryBypassAccessCheck,
+    @Suppress("DEPRECATION")
+    private val temporaryBypassAccessCheck: viaduct.engine.api.TemporaryBypassAccessCheck,
 ) {
     /**
      * Completes the selection set by completing each field.
@@ -104,7 +104,7 @@ class FieldCompleter(
                             Value.fromThrowable(err)
                         }
                 } else {
-                    objectFieldMap(parameters).map { resolvedData ->
+                    objectFieldMap(parameters, parentOER).map { resolvedData ->
                         ctxCompleteObject.onCompleted(resolvedData, null)
                         FieldCompletionResult.obj(resolvedData, parameters)
                     }
@@ -113,35 +113,44 @@ class FieldCompleter(
     }
 
     @Suppress("UNCHECKED_CAST")
-    private fun objectFieldMap(parameters: ExecutionParameters): Value<Map<String, Any?>> {
-        val parentOER = parameters.parentEngineResult
+    private fun objectFieldMap(
+        parameters: ExecutionParameters,
+        parentOER: ObjectEngineResultImpl
+    ): Value<Map<String, Any?>> {
         val fields = collectFields(parentOER.graphQLObjectType, parameters).selections
-        val fieldValues = fields.map { field ->
+        val initial: Value<Map<String, Any?>> = Value.fromValue(emptyMap())
+
+        return fields.fold(initial) { acc, field ->
             field as QueryPlan.CollectedField
 
             val newParams = parameters.forField(parentOER.graphQLObjectType, field)
             val fieldKey = buildOERKeyForField(newParams, field)
+            val dataFetchingEnvironmentProvider = { buildDataFetchingEnvironment(newParams, field, parentOER) }
+
             val bypassChecker = temporaryBypassAccessCheck.shouldBypassCheck(field.mergedField.singleField, parameters.bypassChecksDuringCompletion)
 
             // Obtain a result for this field
-            val handledFieldValue = combineValues(
+            val combinedValue = combineValues(
                 parentOER.getValue(fieldKey, RAW_VALUE_SLOT),
                 parentOER.getValue(fieldKey, ACCESS_CHECK_SLOT),
                 bypassChecker
-            ).handleException(newParams, field)
+            )
 
-            field.responseKey to completeField(field, newParams, handledFieldValue).map { it.value }
-        }
-
-        return Value.waitAll(fieldValues.map { it.second })
-            .thenCompose { _, throwable ->
-                if (throwable != null) {
-                    Value.fromThrowable(throwable)
-                } else {
-                    val resolvedData = fieldValues.associate { (key, value) -> key to value.getCompleted() }
-                    Value.fromValue(resolvedData)
-                }
+            val handledFetch = combinedValue.recover { throwable ->
+                // Handle fetch errors gracefully
+                handleFetchingException(dataFetchingEnvironmentProvider, throwable)
+                    .map {
+                        FieldResolutionResult(null, it.errors, CompositeLocalContext.empty, emptyMap(), null)
+                    }
             }
+
+            val singleField = completeField(field, newParams, handledFetch)
+
+            // Now complete the field with the fetched result
+            acc.flatMap { values ->
+                singleField.map { values + (field.responseKey to it.value) }
+            }
+        }
     }
 
     /**
@@ -167,37 +176,16 @@ class FieldCompleter(
         val checkerResultValue = checkNotNull(checkerSlotValue as? Value<out CheckerResult?>) {
             "Expected checker slot to contain Value<out CheckerResult>, was ${checkerSlotValue.javaClass}"
         }
-        return fieldResolutionResultValue.flatMap { frr ->
-            if (frr.errors.isNotEmpty()) {
-                fieldResolutionResultValue
-            } else {
-                // At this point the raw value resolved without errors, surface the checker error if it exists
-                checkerResultValue.flatMap { checkerResult ->
-                    checkerResult?.asError?.error?.let { Value.fromThrowable(it) } ?: fieldResolutionResultValue
-                }
+        return fieldResolutionResultValue.flatMap {
+            // At this point the raw value resolved successfully
+            checkerResultValue.flatMap { checkerResult ->
+                checkerResult?.asError?.error?.let { Value.fromThrowable(it) } ?: fieldResolutionResultValue
             }
         }
     }
 
     /**
-     * If the this value is exceptional, converts it into a non-exceptional [FieldResolutionResult] value with
-     * handled errors.
-     */
-    private fun Value<FieldResolutionResult>.handleException(
-        params: ExecutionParameters,
-        field: QueryPlan.CollectedField,
-    ): Value<FieldResolutionResult> {
-        return this.recover { throwable ->
-            val dataFetchingEnvironmentProvider = { buildDataFetchingEnvironment(params, field, params.parentEngineResult) }
-            handleFetchingException(dataFetchingEnvironmentProvider, throwable)
-                .map {
-                    FieldResolutionResult.fromErrors(it.errors)
-                }
-        }
-    }
-
-    /**
-     * Handles exceptions from data fetchers and access checks by delegating to the configured handler.
+     * Handles exceptions from data fetchers by delegating to the configured handler.
      *
      * @param dataFetchingEnvironmentProvider The environment provider
      * @param exception The exception to handle
@@ -407,23 +395,29 @@ class FieldCompleter(
         )
         completeListCtx.onDispatched()
 
-        val completedValues = listValues.mapIndexed { i, item ->
+        // Start with a completed Value containing an empty list.
+        val initial: Value<List<FieldCompletionResult>> = Value.fromValue(emptyList())
+        val allItems = listValues.foldIndexed(initial) { i, acc, item ->
             val indexedPath = parameters.path.segment(i)
             val execStepInfoForItem =
                 executionStepInfoFactory.newExecutionStepInfoForListElement(parameters.executionStepInfo, indexedPath)
             val newParams = parameters.copy(executionStepInfo = execStepInfoForItem)
-            val handledItem = item.handleException(newParams, field)
-            completeValue(field, newParams, handledItem, null)
+            val completed = completeValue(field, newParams, item, null)
+            acc.flatMap { values ->
+                completed.map { value ->
+                    values + value
+                }
+            }
         }
 
-        // Once all items are completed, transform them into a single FieldCompletionResult.
-        return Value.waitAll(completedValues)
-            .thenCompose { _, throwable ->
+        // Once all items are collected into a List<FieldCompletionResult>, we transform them into a single FieldCompletionResult.
+        return allItems
+            .thenCompose { fieldValues, throwable ->
                 if (throwable != null) {
                     completeListCtx.onCompleted(null, throwable)
                     getFieldCompletionResultForException(throwable)
                 } else {
-                    val fieldValues = completedValues.map { it.getCompleted() }
+                    checkNotNull(fieldValues)
                     val listResults = fieldValues.map { it.value }
                     completeListCtx.onCompleted(listResults, null)
                     Value.fromValue(

@@ -96,20 +96,14 @@ class FromArgumentVariablesHaveValidPaths(
         }
 
         // Validate type compatibility for each usage
-        val variableUsages = try {
-            rss.selections.selections.collectVariableUsages(schema.schema, variable.name, rss.selections.typeName, rss.selections.fragmentMap)
-        } catch (e: Exception) {
-            throw IllegalStateException(
-                "Variable usage collection failed for RSS with attribution ${rss.attribution}",
-                e
-            )
-        }
+        val variableUsages = rss.selections.selections.collectVariableUsages(schema.schema, variable.name, coordinate.first)
         variableUsages.forEach { usage ->
             val locationType = Type(usage)
             if (!areTypesCompatible(locationType, sourceType)) {
                 val errorMessage =
                     "Type mismatch: variable '${variable.name}' resolves to type '${GraphQLTypeUtil.simplePrint(sourceType.type)}' " +
-                        "but is used in ${usage.contextString} expecting type '${GraphQLTypeUtil.simplePrint(usage.type)}'"
+                        "but is used in field '${usage.fieldName}' argument '${usage.argumentName}' " +
+                        "expecting type '${GraphQLTypeUtil.simplePrint(usage.type)}'"
 
                 throw InvalidVariableException(
                     coordinate,

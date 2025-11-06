@@ -1,8 +1,5 @@
 package viaduct.engine.runtime.execution
 
-import com.github.benmanes.caffeine.cache.Cache
-import com.github.benmanes.caffeine.cache.Caffeine
-import graphql.GraphQLContext
 import graphql.collect.ImmutableMapWithNullValues
 import graphql.execution.CoercedVariables
 import graphql.execution.ExecutionContext
@@ -11,12 +8,10 @@ import graphql.execution.ExecutionStepInfoFactory
 import graphql.execution.ExecutionStrategyParameters
 import graphql.execution.MergedField
 import graphql.execution.NormalizedVariables
-import graphql.execution.RawVariables
 import graphql.execution.ResultPath
 import graphql.execution.ValuesResolver
 import graphql.execution.directives.QueryDirectivesImpl
 import graphql.language.Argument
-import graphql.language.VariableDefinition
 import graphql.normalized.ExecutableNormalizedField
 import graphql.schema.DataFetchingEnvironment
 import graphql.schema.DataFetchingEnvironmentImpl
@@ -26,15 +21,11 @@ import graphql.schema.GraphQLArgument
 import graphql.schema.GraphQLCodeRegistry
 import graphql.schema.GraphQLFieldDefinition
 import graphql.schema.GraphQLObjectType
-import graphql.schema.GraphQLSchema
 import graphql.util.FpKit
-import java.util.Locale
 import java.util.function.Supplier
-import kotlin.collections.plus
 import viaduct.engine.api.EngineExecutionContext
 import viaduct.engine.api.EngineObjectData
 import viaduct.engine.api.ObjectEngineResult
-import viaduct.engine.api.RequiredSelectionSet
 import viaduct.engine.api.VariablesResolver
 import viaduct.engine.api.gj
 import viaduct.engine.api.observability.ExecutionObservabilityContext
@@ -43,8 +34,7 @@ import viaduct.engine.runtime.EngineExecutionContextImpl
 import viaduct.engine.runtime.EngineResultLocalContext
 import viaduct.engine.runtime.ObjectEngineResultImpl
 import viaduct.engine.runtime.ProxyEngineObjectData
-import viaduct.engine.runtime.context.findLocalContextForType
-import viaduct.graphql.utils.collectVariableDefinitions
+import viaduct.engine.runtime.findLocalContextForType
 
 object FieldExecutionHelpers {
     val executionStepInfoFactory = ExecutionStepInfoFactory()
@@ -152,8 +142,7 @@ object FieldExecutionHelpers {
         val engineExecCtx = parameters.executionContext.findLocalContextForType<EngineExecutionContextImpl>()
         val fieldScope = EngineExecutionContextImpl.FieldExecutionScopeImpl(
             fragments = parameters.queryPlan.fragments.map.mapValues { it.value.gjDef },
-            variables = parameters.coercedVariables.toMap(),
-            resolutionPolicy = parameters.resolutionPolicy
+            variables = parameters.coercedVariables.toMap()
         )
         val updatedEngineExecCtx = engineExecCtx.copy(fieldScope = fieldScope)
 
@@ -251,83 +240,25 @@ object FieldExecutionHelpers {
         )
 
     /**
-     * Resolves variables for a [QueryPlan].
-     */
-    suspend fun resolveQueryPlanVariables(
-        plan: QueryPlan,
-        arguments: Map<String, Any?>,
-        currentEngineData: ObjectEngineResult,
-        queryEngineData: ObjectEngineResult,
-        engineExecutionContext: EngineExecutionContext,
-        graphQLContext: GraphQLContext,
-        locale: Locale,
-    ): CoercedVariables =
-        resolveVariables(
-            plan.variableDefinitions,
-            plan.variablesResolvers,
-            arguments,
-            currentEngineData,
-            queryEngineData,
-            engineExecutionContext,
-            graphQLContext,
-            locale,
-        )
-
-    /**
-     * Resolves variables for a [RequiredSelectionSet].
-     */
-    suspend fun resolveRSSVariables(
-        rss: RequiredSelectionSet,
-        arguments: Map<String, Any?>,
-        currentEngineData: ObjectEngineResult,
-        queryEngineData: ObjectEngineResult,
-        engineExecutionContext: EngineExecutionContext,
-        graphQLContext: GraphQLContext,
-        locale: Locale,
-    ): CoercedVariables =
-        resolveVariables(
-            rssVariableDefinitions(rss, engineExecutionContext.fullSchema.schema),
-            rss.variablesResolvers,
-            arguments,
-            currentEngineData,
-            queryEngineData,
-            engineExecutionContext,
-            graphQLContext,
-            locale,
-        )
-
-    /**
      * Recursively resolve all values in the provided [variablesResolvers].
      * If any resolver in [variablesResolvers] depends on engine data, then this will return
      * after the dependee data have resolved.
      */
-    private suspend fun resolveVariables(
-        variableDefinitions: List<VariableDefinition>,
+    suspend fun resolveVariables(
         variablesResolvers: List<VariablesResolver>,
         arguments: Map<String, Any?>,
         currentEngineData: ObjectEngineResult,
         queryEngineData: ObjectEngineResult,
-        engineExecutionContext: EngineExecutionContext,
-        graphQLContext: GraphQLContext,
-        locale: Locale
-    ): CoercedVariables =
-        variablesResolvers.fold(emptyMap<String, Any?>()) { acc, vr ->
+        engineExecutionContext: EngineExecutionContext
+    ): Map<String, Any?> =
+        variablesResolvers.fold(emptyMap()) { acc, vr ->
             val variablesData: EngineObjectData = vr.requiredSelectionSet?.let { vrss ->
                 // VariablesResolvers may have required selection sets which have their own variables resolvers.
                 // Recursively resolve them
-                val innerVariables = resolveVariables(
-                    rssVariableDefinitions(vrss, engineExecutionContext.fullSchema.schema),
-                    vrss.variablesResolvers,
-                    arguments,
-                    currentEngineData,
-                    queryEngineData,
-                    engineExecutionContext,
-                    graphQLContext,
-                    locale
-                )
+                val innerVariables = resolveVariables(vrss.variablesResolvers, arguments, currentEngineData, queryEngineData, engineExecutionContext)
                 val vss = engineExecutionContext.rawSelectionSetFactory.rawSelectionSet(
                     vrss.selections,
-                    variables = innerVariables.toMap()
+                    variables = innerVariables
                 )
 
                 val engineResult = if (vrss.selections.typeName == engineExecutionContext.fullSchema.schema.queryType.name) {
@@ -347,40 +278,5 @@ object FieldExecutionHelpers {
 
             val resolved = vr.resolve(VariablesResolver.ResolveCtx(variablesData, arguments, engineExecutionContext))
             acc + resolved
-        }.let {
-            ValuesResolver.coerceVariableValues(
-                engineExecutionContext.fullSchema.schema,
-                variableDefinitions,
-                RawVariables(it),
-                graphQLContext,
-                locale
-            )
         }
-
-    /**
-     * Cache for variable definitions computed from RequiredSelectionSets. Uses weak keys for reference equality
-     * and automatic cleanup when new RequiredSelectionSets are created, e.g. during hotswap.
-     */
-    private val rssVariableDefinitionsCache: Cache<RequiredSelectionSet, List<VariableDefinition>> =
-        Caffeine.newBuilder()
-            .weakKeys()
-            .build()
-
-    /**
-     * Get or compute variable definitions for a RequiredSelectionSet instance
-     */
-    private fun rssVariableDefinitions(
-        rss: RequiredSelectionSet,
-        schema: GraphQLSchema
-    ): List<VariableDefinition> {
-        return checkNotNull(
-            rssVariableDefinitionsCache.get(rss) {
-                rss.selections.selections.collectVariableDefinitions(
-                    schema,
-                    rss.selections.typeName,
-                    rss.selections.fragmentMap
-                )
-            }
-        ) { "Unexpected null value from rssVariableDefinitions" }
-    }
 }

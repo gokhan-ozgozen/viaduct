@@ -8,6 +8,7 @@ import graphql.schema.idl.SchemaParser
 import kotlin.test.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
+import viaduct.api.FieldValue
 import viaduct.api.context.FieldExecutionContext
 import viaduct.api.internal.InternalContext
 import viaduct.api.internal.ResolverBase
@@ -20,8 +21,10 @@ import viaduct.tenant.testing.DefaultAbstractResolverTestBase
 
 class SimpleResolverTest : DefaultAbstractResolverTestBase() {
     private val SCHEMA_SDL = """
+     directive @resolver on FIELD_DEFINITION | OBJECT
+
      type Query {
-       foo: String
+       foo: String @resolver
      }
     """
 
@@ -36,6 +39,8 @@ class SimpleResolverTest : DefaultAbstractResolverTestBase() {
                 InternalContext by (inner as InternalContext)
 
             open suspend fun resolve(ctx: Context): String? = throw NotImplementedError("Query.field.resolve not implemented")
+
+            open suspend fun batchResolve(contexts: List<Context>): List<FieldValue<String?>> = throw NotImplementedError("Query.field.batchResolve not implemented")
         }
     }
 
@@ -46,10 +51,13 @@ class SimpleResolverTest : DefaultAbstractResolverTestBase() {
     }
 
     override fun getSchema(): ViaductSchema {
-        val typeDefinitionRegistry = SchemaParser().parse(SCHEMA_SDL)
-        val runtimeWiring = RuntimeWiring.newRuntimeWiring().build()
+        val schemaParser = SchemaParser()
+        val typeDefinitionRegistry = schemaParser.parse(SCHEMA_SDL)
 
-        return ViaductSchema(SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring))
+        val runtimeWiring = RuntimeWiring.newRuntimeWiring().build()
+        val graphQLSchema = SchemaGenerator().makeExecutableSchema(typeDefinitionRegistry, runtimeWiring)
+
+        return ViaductSchema(graphQLSchema)
     }
 
     @Test

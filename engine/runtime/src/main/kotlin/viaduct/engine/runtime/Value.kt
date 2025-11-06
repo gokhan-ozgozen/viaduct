@@ -1,16 +1,13 @@
 package viaduct.engine.runtime
 
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import viaduct.deferred.cancelledDeferred
 import viaduct.deferred.completedDeferred
 import viaduct.deferred.exceptionalDeferred
 import viaduct.deferred.exceptionallyCompose
 import viaduct.deferred.handle
 import viaduct.deferred.thenApply
 import viaduct.deferred.thenCompose
-import viaduct.deferred.waitAllDeferreds
 
 /**
  * Value<T> provides a uniform interface for transforming asynchronous,
@@ -48,11 +45,6 @@ sealed interface Value<T> {
      * Returns the provided value, or throws if this Value is in an exceptional state
      */
     suspend fun await(): T
-
-    /**
-     * Return the completed value, or throw if this Value is not yet completed or is in an exceptional state.
-     */
-    fun getCompleted(): T
 
     /**
      * Recover an exceptional [Value] using the provided [block]
@@ -93,8 +85,6 @@ sealed interface Value<T> {
     private value class SyncValue<T>(val value: T) : Sync<T> {
         override fun getOrThrow(): T = value
 
-        override fun getCompleted(): T = value
-
         override fun <U> map(block: (T) -> U): Value<U> = SyncValue(block(value))
 
         override fun <U> flatMap(block: (T) -> Value<U>): Value<U> = block(value)
@@ -115,8 +105,6 @@ sealed interface Value<T> {
         override fun <U> map(block: (T) -> U): Value<U> = this as Value<U>
 
         override fun <U> flatMap(block: (T) -> Value<U>): Value<U> = this as Value<U>
-
-        override fun getCompleted(): T = getOrThrow()
 
         override fun asDeferred(): Deferred<T> = exceptionalDeferred(throwable)
 
@@ -149,9 +137,6 @@ sealed interface Value<T> {
 
         override suspend fun await() = deferred.await()
 
-        @OptIn(ExperimentalCoroutinesApi::class)
-        override fun getCompleted(): T = deferred.getCompleted()
-
         override fun recover(block: (Throwable) -> Value<T>): Value<T> =
             fromDeferred(
                 deferred.exceptionallyCompose { e ->
@@ -175,34 +160,24 @@ sealed interface Value<T> {
         /** Create a synchronous [Value] from the provided [Throwable]. */
         fun <T> fromThrowable(throwable: Throwable): Sync<T> = SyncThrow(throwable)
 
+        /**
+         * Wait for all values to be completed and discard any errors
+         */
         fun <T> waitAll(values: Collection<Value<T>>): Value<Unit> {
-            if (values.isEmpty()) return fromValue(Unit)
-
-            val deferreds = mutableListOf<Deferred<*>>()
-            values.forEach { value ->
-                when (value) {
-                    is SyncThrow -> return fromThrowable(value.throwable)
-                    is SyncValue -> Unit
-                    is AsyncDeferred -> deferreds += value.deferred
+            val initial: Value<Unit> = Value.fromValue(Unit)
+            return values.fold(initial) { acc, value ->
+                acc.flatMap { _ ->
+                    value.thenApply { _, _ ->
+                        Unit
+                    }
                 }
-            }
-
-            return if (deferreds.isEmpty()) {
-                fromValue(Unit)
-            } else {
-                fromDeferred(waitAllDeferreds(deferreds))
             }
         }
 
         /**
          * Create a [Value] from the provided [Deferred].
          *
-         * If the deferred is already completed successfully, returns a [SyncValue]; if it is
-         * completed exceptionally, returns a [SyncThrow]. If it is completed with cancellation,
-         * the result is a cancelled Async-backed Value so downstream callers still observe
-         * cancellation semantics (isCancelled=true) instead of a generic exceptional Value.
-         *
-         * @return a Value representing the provided Deferred
+         * This method will return a [SyncValue] if the deferred is completed.
          */
         @Suppress("TooGenericExceptionCaught")
         @OptIn(ExperimentalCoroutinesApi::class)
@@ -210,12 +185,8 @@ sealed interface Value<T> {
             if (deferred.isCompleted) {
                 try {
                     fromValue(deferred.getCompleted())
-                } catch (ex: Exception) {
-                    if (ex is CancellationException && deferred.isCancelled) {
-                        AsyncDeferred(cancelledDeferred(ex))
-                    } else {
-                        fromThrowable(ex)
-                    }
+                } catch (e: Throwable) {
+                    fromThrowable(e)
                 }
             } else {
                 AsyncDeferred(deferred)

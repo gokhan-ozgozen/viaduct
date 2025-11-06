@@ -368,20 +368,6 @@ class GraphQLTypeRelationsTest : Assertions() {
             assertFalse(rels.spreadableTypes(b).contains(a))
         }
     }
-
-    @Test
-    fun `union -- ignores VIADUCT_IGNORE members`() {
-        Fixture(
-            """
-                type VIADUCT_IGNORE { x:Int }
-                union Union = VIADUCT_IGNORE
-            """.trimIndent()
-        ).apply {
-            val ignore = "VIADUCT_IGNORE".asCompositeType
-            val union = "Union".asCompositeType
-            assertFalse(ignore in rels.possibleObjectTypes(union))
-        }
-    }
 }
 
 fun mkSchema(sdl: String): GraphQLSchema {

@@ -49,7 +49,7 @@ afterEvaluate {
             name.set(resolvedName)
             if (resolvedDescription.isNotBlank()) description.set(resolvedDescription) else description.set("Viaduct library $resolvedArtifactId")
 
-            url.set("https://viaduct.airbnb.tech/")
+            url.set("https://airbnb.io/viaduct/")
             licenses { license {
                 name.set("Apache License, Version 2.0")
                 url.set("https://www.apache.org/licenses/LICENSE-2.0")

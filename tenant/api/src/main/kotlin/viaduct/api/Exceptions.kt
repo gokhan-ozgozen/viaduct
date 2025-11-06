@@ -1,9 +1,6 @@
 package viaduct.api
 
 import java.lang.reflect.InvocationTargetException
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 
 /**
  * Use this to wrap all entry points into the tenant API. This will catch any exception
@@ -33,7 +30,6 @@ internal suspend fun <T> handleTenantAPIErrorsSuspend(
     try {
         return block()
     } catch (e: Throwable) {
-        if (e is CancellationException) currentCoroutineContext().ensureActive()
         if (e is ViaductTenantException) throw e
         throw ViaductFrameworkException("$message ($e)", e)
     }
@@ -90,7 +86,6 @@ suspend fun wrapResolveException(
     return try {
         resolveFn()
     } catch (e: Exception) {
-        if (e is CancellationException) currentCoroutineContext().ensureActive()
         // Since the resolver function is called via reflection, exceptions thrown from inside
         // the resolver may be wrapped in an InvocationTargetException.
         val resolverException = if (e is InvocationTargetException) {

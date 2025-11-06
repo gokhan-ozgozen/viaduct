@@ -5,7 +5,6 @@ import graphql.schema.DataFetcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import viaduct.engine.runtime.exceptions.FieldFetchingException
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.runExecutionTest
 
 @ExperimentalCoroutinesApi

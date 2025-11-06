@@ -9,7 +9,7 @@ A minimal Viaduct GraphQL application using Eclipse Jetty servlet container. Thi
 
 ## Quick Start
 
-Check out the [Getting Started](https://viaduct.airbnb.tech/docs/getting_started/) docs.
+Check out the [Getting Started](https://airbnb.io/viaduct/docs/getting_started/) docs.
 
 ### Start the Viaduct Jetty Starter App
 

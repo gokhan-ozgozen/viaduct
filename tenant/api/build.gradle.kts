@@ -14,28 +14,30 @@ viaductPublishing {
 }
 
 dependencies {
-    /** Viaduct dependencies **/
-    implementation(libs.viaduct.engine.api)
-    implementation(libs.viaduct.shared.mapping)
-
-    /** External dependencies **/
     implementation(libs.graphql.java)
-    implementation(libs.kotlin.reflect)
-    implementation(libs.jackson.databind)
-    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.javax.inject)
+    implementation(libs.viaduct.engine.api)
 
-    /** Test fixtures - Viaduct dependencies **/
+    implementation(libs.guava)
+
+    implementation(libs.viaduct.shared.utils)
+    implementation(libs.viaduct.shared.viaductschema)
+    implementation(libs.kotlin.reflect)
+
+    testFixturesApi(libs.viaduct.engine.api)
+    testFixturesApi(libs.graphql.java)
+    testFixturesApi(libs.viaduct.shared.viaductschema)
+
     testFixturesImplementation(testFixtures(libs.viaduct.engine.api))
     testFixturesImplementation(libs.viaduct.tenant.runtime)
 
-    /** Test fixtures - External dependencies **/
-    testFixturesApi(libs.junit)
-
-    /** Test dependencies - Viaduct **/
-    testImplementation(testFixtures(libs.viaduct.shared.mapping))
-
-    /** Test dependencies - External **/
-    testImplementation(libs.graphql.java.extension)
+    testImplementation(testFixtures(libs.viaduct.engine.api))
+    testImplementation(libs.viaduct.tenant.runtime)
+    testImplementation(libs.viaduct.shared.arbitrary)
+    testImplementation(libs.io.mockk.dsl)
     testImplementation(libs.io.mockk.jvm)
+    testImplementation(libs.kotest.property.jvm)
+    testImplementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.strikt.core)
 }

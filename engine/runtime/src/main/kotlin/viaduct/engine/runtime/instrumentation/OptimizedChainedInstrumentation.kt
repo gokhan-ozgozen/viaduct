@@ -104,7 +104,7 @@ class OptimizedChainedInstrumentation(
     override fun beginFetchObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Unit> =
+    ): InstrumentationContext<Map<String, Any?>>? =
         ChainedInstrumentationContext(
             beginFetchObjectInstrumentations.map { instr ->
                 instr.beginFetchObject(parameters, getState(instr, state))
@@ -118,7 +118,7 @@ class OptimizedChainedInstrumentation(
     override fun beginCompleteObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> =
+    ): InstrumentationContext<Any>? =
         ChainedInstrumentationContext(
             beginCompleteObjectInstrumentations.map { instr ->
                 instr.beginCompleteObject(parameters, getState(instr, state))

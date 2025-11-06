@@ -42,9 +42,9 @@ import viaduct.engine.api.RequiredSelectionSetRegistry
 import viaduct.engine.api.TypeCheckerDispatcherRegistry
 import viaduct.engine.api.instrumentation.ViaductModernGJInstrumentation
 import viaduct.engine.api.observability.ExecutionObservabilityContext
+import viaduct.engine.runtime.CompositeLocalContext
 import viaduct.engine.runtime.FieldResolutionResult
 import viaduct.engine.runtime.ObjectEngineResultImpl
-import viaduct.engine.runtime.context.CompositeLocalContext
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.createLocalContext
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.createSchema
 
@@ -455,8 +455,7 @@ class ExecutionParametersTest {
             childPlans = emptyList(),
             astSelectionSet = astSelectionSet,
             attribution = attribution,
-            executionCondition = QueryPlanExecutionCondition.ALWAYS_EXECUTE,
-            variableDefinitions = emptyList()
+            executionCondition = QueryPlanExecutionCondition.ALWAYS_EXECUTE
         )
 
     private fun executionStepInfoForField(

@@ -15,19 +15,14 @@ class ApiTestSchemaFeatureAppTest {
     |   enumField: E1
     |   interfaceField: I0
     |   listFieldNonNullBaseType: [[O2!]!]
-    |   backingDataList: [BackingData] @backingData(class: "java.lang.Integer")
+    |   backingDataList: [BackingData!] @backingData(class: "java.lang.Integer")
     | }
     | type O2 implements Node {
     |   id: ID!
     |   intField: Int!
     |   objectField: O1
     |   dateTimeField: DateTime
-    |   argumentedField(
-    |     stringArg: String!,
-    |     intArgWithDefault: Int = 1,
-    |     inputArg: Input1,
-    |     idArg: ID @idOf(type: "O1")
-    |   ): String
+    |   argumentedField(stringArg: String!, intArgWithDefault: Int = 1, inputArg: Input1): String
     |   backingDataField: BackingData @backingData(class: "java.lang.String")
     |   invalidBackingData: BackingData
     | }
@@ -53,9 +48,6 @@ class ApiTestSchemaFeatureAppTest {
     | }
     | input Input2 {
     |   stringField: String
-    |   id1: ID
-    |   id2: ID @idOf(type: "TestUser")
-    |   dateTimeField: DateTime
     | }
     | input Input3 {
     |   inputField: Input2 = { stringField: "defaultStringField" }
@@ -64,24 +56,7 @@ class ApiTestSchemaFeatureAppTest {
     | input InputWithGlobalIDs {
     |   id: ID!
     |   id2: ID! @idOf(type: "O1")
-    |   id3: [ID] @idOf(type: "O1")
     |   ids: [[ID]!] @idOf(type: "O2")
-    | }
-
-    | type ObjectWithGlobalIds {
-    |   # this field is named "id" so that it looks like a Node.id field,
-    |   # though the containing type intentionally does not implement Node.
-    |   id: ID!
-    |
-    |   id1: ID @idOf(type: "TestUser")
-    |   id2: ID! @idOf(type: "TestUser")
-    |   id4: [ID] @idOf(type: "TestUser")
-    |   id5: [[ID!]] @idOf(type: "TestUser")
-    |
-    |   id6: ID
-    |   id7: ID!
-    |   id8: [ID]
-    |   id9: [[ID!]]
     | }
     |
     | type TestUser implements Node {
@@ -94,28 +69,6 @@ class ApiTestSchemaFeatureAppTest {
     | type TestType {
     |   id: ID!
     | }
-    |
-    | union U1 = I1 | TestType
-    |
-    | type Scalars {
-    |   boolean: Boolean
-    |   byte: Byte
-    |   short: Short
-    |   int: Int
-    |   long: Long
-    |   float: Float
-    |   json: JSON
-    |   string: String
-    |   id: ID
-    |   backingData: BackingData
-    |   date: Date
-    |   dateTime: DateTime
-    |   time: Time
-    | }
-    |
-    | type HasAbstractField { u2: U2 }
-    | union U2 = Concrete
-    | type Concrete { x:Int }
     |
 #END_SCHEMA
     """

@@ -12,8 +12,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import viaduct.engine.api.instrumentation.ViaductInstrumentationBase
 import viaduct.engine.runtime.EngineExecutionContextImpl
-import viaduct.engine.runtime.context.findLocalContextForType
-import viaduct.engine.runtime.context.isIntrospective
+import viaduct.engine.runtime.findLocalContextForType
+import viaduct.engine.runtime.isIntrospective
 import viaduct.engine.runtime.mkSchema
 import viaduct.engine.runtime.mocks.ContextMocks
 import viaduct.service.api.spi.FlagManager

@@ -293,7 +293,7 @@ class FromFieldVariablesHaveValidPathsTest {
     fun `valid -- nullable value used in nested oneof`() {
         Fixture(
             """
-                type Query { x:Int, y(inp1:Inp1!):Int, z:Int }
+                type Query { x:Int, y(inp1:Inp2!):Int, z:Int }
                 input Inp1 @oneOf { inp2:Inp2 }
                 input Inp2 @oneOf { x:Int }
             """.trimIndent()
@@ -312,7 +312,7 @@ class FromFieldVariablesHaveValidPathsTest {
     fun `valid -- non-nullable value used in nested oneof`() {
         Fixture(
             """
-                type Query { x:Int, y(inp1:Inp1!):Int, z:Int! }
+                type Query { x:Int, y(inp1:Inp2!):Int, z:Int! }
                 input Inp1 @oneOf { inp2:Inp2 }
                 input Inp2 @oneOf { x:Int }
             """.trimIndent()
@@ -331,7 +331,7 @@ class FromFieldVariablesHaveValidPathsTest {
     fun `valid -- nullable value used in deep oneof`() {
         Fixture(
             """
-                type Query { x:Int, y(inp1:Inp1!):Int, z:Int }
+                type Query { x:Int, y(inp1:Inp2!):Int, z:Int }
                 input Inp1 { inp2:Inp2! }
                 input Inp2 @oneOf { x:Int }
             """.trimIndent()
@@ -350,7 +350,7 @@ class FromFieldVariablesHaveValidPathsTest {
     fun `valid -- non-nullable value used in deep oneof`() {
         Fixture(
             """
-                type Query { x:Int, y(inp1:Inp1!):Int, z:Int! }
+                type Query { x:Int, y(inp1:Inp2!):Int, z:Int! }
                 input Inp1 { inp2:Inp2! }
                 input Inp2 @oneOf { x:Int }
             """.trimIndent()
@@ -503,61 +503,65 @@ class FromFieldVariablesHaveValidPathsTest {
     }
 
     @Test
-    fun `valid -- non-nullable non-list value can be coerced to nullable list`() {
+    fun `invalid -- non-nullable non-list value cannot be used in nullable list location`() {
         Fixture("type Query { x:Int, y(a:[Int]):Int, z:Int! }") {
-            assertAllValid(
+            val err = assertOneInvalid<InvalidVariableException>(
                 mkReg(
                     "Query" to "x",
                     objectSelections = "y(a:\$var), z",
                     objectVariablePaths = mapOf("var" to "z") // z is Int!, used where [Int] expected
                 )
             )
+            assertTrue(err.reason.lowercase().contains("types not compatible"))
         }
     }
 
     @Test
-    fun `valid -- non-nullable non-list value can be coerced to non-nullable list`() {
+    fun `invalid -- non-nullable non-list value cannot be used in non-nullable list location`() {
         Fixture("type Query { x:Int, y(a:[Int]!):Int, z:Int! }") {
-            assertAllValid(
+            val err = assertOneInvalid<InvalidVariableException>(
                 mkReg(
                     "Query" to "x",
                     objectSelections = "y(a:\$var), z",
                     objectVariablePaths = mapOf("var" to "z") // z is Int!, used where [Int]! expected
                 )
             )
+            assertTrue(err.reason.lowercase().contains("types not compatible"))
         }
     }
 
     @Test
-    fun `valid -- non-nullable non-list value can be coerced to list with non-nullable items`() {
+    fun `invalid -- non-nullable non-list value cannot be used in non-nullable list location 1`() {
         Fixture("type Query { x:Int, y(a:[Int!]!):Int, z:Int! }") {
-            assertAllValid(
+            val err = assertOneInvalid<InvalidVariableException>(
                 mkReg(
                     "Query" to "x",
                     objectSelections = "y(a:\$var), z",
                     objectVariablePaths = mapOf("var" to "z") // z is Int!, used where [Int!]! expected
                 )
             )
+            assertTrue(err.reason.lowercase().contains("types not compatible"))
         }
     }
 
     @Test
-    fun `valid -- nullable non-list value can be coerced to nullable list`() {
+    fun `invalid -- nullable non-list value cannot be used in nullable list location`() {
         Fixture("type Query { x:Int, y(a:[Int]):Int, z:Int }") {
-            assertAllValid(
+            val err = assertOneInvalid<InvalidVariableException>(
                 mkReg(
                     "Query" to "x",
                     objectSelections = "y(a:\$var), z",
                     objectVariablePaths = mapOf("var" to "z") // z is Int, used where [Int] expected
                 )
             )
+            assertTrue(err.reason.lowercase().contains("types not compatible"))
         }
     }
 
     @Test
-    fun `valid -- non-nullable list value can be coerced to list-of-list`() {
+    fun `invalid -- non-nullable list value cannot be used where list-of-list is required`() {
         Fixture("type Query { x:Int, y(a:[[Int]]):Int, z:[Int]! }") {
-            assertAllValid(
+            assertOneInvalid<InvalidVariableException>(
                 mkReg(
                     "Query" to "x",
                     objectSelections = "y(a:\$var), z",
@@ -568,15 +572,16 @@ class FromFieldVariablesHaveValidPathsTest {
     }
 
     @Test
-    fun `valid -- nullable list value can be coerced to list-of-list`() {
+    fun `invalid -- nullable list value cannot be used where list-of-list is required`() {
         Fixture("type Query { x:Int, y(a:[[Int]]):Int, z:[Int] }") {
-            assertAllValid(
+            val err = assertOneInvalid<InvalidVariableException>(
                 mkReg(
                     "Query" to "x",
                     objectSelections = "y(a:\$var), z",
                     objectVariablePaths = mapOf("var" to "z") // z is [Int], used where [[Int]] expected
                 )
             )
+            assertTrue(err.reason.lowercase().contains("types not compatible"))
         }
     }
 
@@ -697,39 +702,6 @@ class FromFieldVariablesHaveValidPathsTest {
                 )
                 assertTrue(err.reason.lowercase().contains("cannot traverse list"))
             }
-        }
-    }
-
-    @Test
-    fun `invalid -- fragment spread with variable`() {
-        Fixture("type Query { x:Int, y(a:Int!):Int, z:Query!, w:String! }") {
-            val err = assertOneInvalid<InvalidVariableException>(
-                mkReg(
-                    "Query" to "x",
-                    objectSelections = "fragment Main on Query { y(a:\$var), ...QueryFields } fragment QueryFields on Query { z { w } }",
-                    objectVariablePaths = mapOf("var" to "z.w")
-                )
-            )
-            assertTrue(err.reason.lowercase().contains("types not compatible"))
-        }
-    }
-
-    @Test
-    fun `invalid -- fragment spread on non-Query type`() {
-        Fixture(
-            """
-                type Query { x:Int }
-                type User { id:String!, updateName(name:Int!):String!, username:String! }
-            """.trimIndent()
-        ) {
-            val err = assertOneInvalid<InvalidVariableException>(
-                mkReg(
-                    "User" to "id",
-                    objectSelections = "fragment Main on User { ...UserFields } fragment UserFields on User { updateName(name:\$name), username }",
-                    objectVariablePaths = mapOf("name" to "username")
-                )
-            )
-            assertTrue(err.reason.lowercase().contains("types not compatible"))
         }
     }
 

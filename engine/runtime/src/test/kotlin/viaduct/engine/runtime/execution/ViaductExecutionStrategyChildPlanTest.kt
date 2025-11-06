@@ -9,7 +9,6 @@ import graphql.schema.TypeResolver
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -1438,10 +1437,7 @@ class ViaductExecutionStrategyChildPlanTest {
                             env.getSource<Map<String, Any>>()!!["id"]
                         },
                         "foo" to DataFetcher { env ->
-                            scopedFuture {
-                                delay(10)
-                                env.getSource<Map<String, Any>>()!!["foo"]
-                            }
+                            env.getSource<Map<String, Any>>()!!["foo"]
                         },
                         "fooSpecific" to DataFetcher { env ->
                             val parentStepInfo = checkNotNull(env.executionStepInfo.parent) {

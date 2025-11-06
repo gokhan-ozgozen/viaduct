@@ -24,36 +24,16 @@ cd viaduct-hello-world
 ### Configuring Gradle
 
 Create a `settings.gradle.kts` file with the following content:
+{{< codetag path="demoapps/cli-starter/settings.gradle.kts" tag="dependency-resolution">}}
 
-```kotlin
-pluginManagement {
-   repositories {
-       mavenCentral()
-       gradlePluginPortal()
-   }
-}
+Create a `gradle.properties` file to specify the Viaduct version:
 
-dependencyResolutionManagement {
-   repositories {
-       mavenCentral()
-   }
-   versionCatalogs {
-       create("libs")
-   }
-}
-```
+{{< codetag path="demoapps/cli-starter/gradle.properties" tag="viaduct-version">}}
 
 
 You'll need to create a `gradle/libs.versions.toml` file:
 
-```toml
-[versions]
-viaduct = "0.7.0"
-
-[plugins]
-viaduct-application = { id = "com.airbnb.viaduct.application-gradle-plugin", version.ref = "viaduct" }
-viaduct-module = { id = "com.airbnb.viaduct.module-gradle-plugin", version.ref = "viaduct" }
-```
+{{< codetag path="demoapps/cli-starter/gradle/libs.versions.toml" tag="viaduct-plugins">}}
 
 Create a `build.gradle.kts` file. The key requirement is to include both Viaduct plugins:
 
@@ -94,7 +74,6 @@ Create `src/main/kotlin/com/example/viadapp/resolvers/HelloWorldResolvers.kt`:
 Build your application:
 
 ```shell
-gradle wrapper --gradle-version 8.14
 ./gradlew build
 ```
 
@@ -103,10 +82,8 @@ Run the application:
 ```shell
 ./gradlew -q run --args="'{ greeting }'"
 ```
-or
-```shell
-./gradlew -q run --args="'{ author }'"
-```
+
+You should see the GraphQL response with your greeting!
 
 ## What's Next
 

@@ -29,7 +29,7 @@ class ChainedViaductModernInstrumentation private constructor(
     override fun beginFetchObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Unit> {
+    ): InstrumentationContext<Map<String, Any?>>? {
         return ChainedInstrumentationContext(
             beginFetchObjectInstrumentations.map { instr ->
                 instr.beginFetchObject(parameters, getState(instr, state))
@@ -44,7 +44,7 @@ class ChainedViaductModernInstrumentation private constructor(
     override fun beginFieldExecution(
         parameters: InstrumentationFieldParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> {
+    ): InstrumentationContext<Any>? {
         return ChainedInstrumentationContext(
             beginFieldExecutionInstrumentations.map { instr ->
                 instr.beginFieldExecution(parameters, getState(instr, state))
@@ -74,7 +74,7 @@ class ChainedViaductModernInstrumentation private constructor(
     override fun beginCompleteObject(
         parameters: InstrumentationExecutionStrategyParameters,
         state: InstrumentationState?
-    ): InstrumentationContext<Any> {
+    ): InstrumentationContext<Any>? {
         return ChainedInstrumentationContext(
             beginCompleteObjectInstrumentations.map { instr ->
                 instr.beginCompleteObject(parameters, getState(instr, state))

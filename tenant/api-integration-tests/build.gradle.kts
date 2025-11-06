@@ -40,6 +40,4 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.core)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.strikt.core)
-    testImplementation(testFixtures(libs.viaduct.shared.mapping))
-    testImplementation(testFixtures(libs.viaduct.engine.api))
 }

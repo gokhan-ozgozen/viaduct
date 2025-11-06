@@ -11,5 +11,5 @@ class TestType_ParameterizedField_Arguments internal constructor(
     override val inputData: Map<String, Any?>,
     override val graphQLInputObjectType: GraphQLInputObjectType,
 ) : InputLikeBase(), Arguments {
-    val experiment: Boolean? get() = get("experiment")
+    val experiment: Boolean? get() = get("experiment", Boolean::class)
 }

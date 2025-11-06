@@ -19,7 +19,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertNull
@@ -34,18 +33,17 @@ import viaduct.dataloader.InternalDataLoader
 import viaduct.dataloader.MappedBatchLoadFn
 import viaduct.dataloader.NextTickDispatcher
 import viaduct.engine.api.FieldCheckerDispatcherRegistry
-import viaduct.engine.api.RequestScopeCancellationException
 import viaduct.engine.api.RequiredSelectionSetRegistry
 import viaduct.engine.api.TypeCheckerDispatcherRegistry
 import viaduct.engine.api.instrumentation.ViaductModernInstrumentation
 import viaduct.engine.api.mocks.MockRequiredSelectionSetRegistry
 import viaduct.engine.runtime.EngineResultLocalContext
-import viaduct.engine.runtime.context.getLocalContextForType
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.createSchema
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.createViaductGraphQL
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.executeQuery
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.executeViaductModernGraphQL
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.runExecutionTest
+import viaduct.engine.runtime.getLocalContextForType
 import viaduct.service.api.spi.FlagManager
 import viaduct.utils.slf4j.logger
 
@@ -88,29 +86,6 @@ class ViaductExecutionStrategyTest {
         wrappedDispatcher = kotlinx.coroutines.newSingleThreadContext("test-dispatcher"),
         flagManager = FlagManager.disabled
     )
-
-    @Test
-    fun `fatal error in data fetcher crashes request`() =
-        runExecutionTest {
-            val sdl = "type Query { field: String }"
-            val resolvers = mapOf(
-                "Query" to mapOf(
-                    "field" to DataFetcher<String> {
-                        // Throw Error, not Exception - represents fatal JVM error
-                        throw AssertionError("Fatal invariant violation")
-                    }
-                )
-            )
-
-            val exception = assertThrows<AssertionError> {
-                executeViaductModernGraphQL(sdl, resolvers, "{ field }")
-            }
-
-            assertTrue(
-                exception.message?.contains("Fatal invariant violation") ==
-                    true
-            )
-        }
 
     @Test
     fun `instrumentation failure during field completion is contained at field level`() =
@@ -980,7 +955,7 @@ class ViaductExecutionStrategyTest {
                 """
 
                 val hangingJobLaunched = CompletableDeferred<Unit>()
-                val hangingJobCancelled = CompletableDeferred<Throwable?>()
+                val hangingJobCancelled = CompletableDeferred<Unit>()
 
                 val resolvers = mapOf(
                     "Query" to mapOf(
@@ -992,7 +967,9 @@ class ViaductExecutionStrategyTest {
                                     hangingJobLaunched.complete(Unit)
                                     delay(Long.MAX_VALUE)
                                 }.invokeOnCompletion { cause ->
-                                    hangingJobCancelled.complete(cause)
+                                    if (cause is kotlinx.coroutines.CancellationException) {
+                                        hangingJobCancelled.complete(Unit)
+                                    }
                                 }
                                 // Return immediately - the job runs on parent scope
                                 "hanging"
@@ -1021,12 +998,9 @@ class ViaductExecutionStrategyTest {
                 assertTrue(result.errors.isEmpty())
 
                 // The hanging child plan job should be cancelled after execution completes
-                val cause = withTimeout(1000) {
+                withTimeout(1000) {
                     hangingJobCancelled.await()
                 }
-                assertNotNull(cause)
-                assertInstanceOf(RequestScopeCancellationException::class.java, cause)
-                Unit
             }
         }
 
@@ -1199,32 +1173,6 @@ class ViaductExecutionStrategyTest {
                 withTimeout(1000) {
                     grandchildWasCancelled.await()
                 }
-            }
-
-        @Test
-        fun `request supervisor cancellation uses RequestScopeCancellationException`() =
-            runExecutionTest {
-                val strategy = createTestStrategy()
-                val cancellationCause = CompletableDeferred<Throwable?>()
-
-                runBlocking {
-                    withThreadLocalCoroutineContext {
-                        strategy.withRequestSupervisor { supervisorScopeFactory ->
-                            supervisorScopeFactory(coroutineContext).launch {
-                                delay(Long.MAX_VALUE)
-                            }.invokeOnCompletion { cause ->
-                                cancellationCause.complete(cause)
-                            }
-                        }
-                    }
-                }
-
-                val cause = withTimeout(1000) {
-                    cancellationCause.await()
-                }
-
-                assertNotNull(cause)
-                assertInstanceOf(RequestScopeCancellationException::class.java, cause)
             }
     }
 }

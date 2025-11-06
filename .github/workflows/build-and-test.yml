@@ -28,7 +28,7 @@ on:
     branches:
       - main
 
-jobs:
+jobs: 
   build:
     strategy:
       matrix:
@@ -189,19 +189,6 @@ jobs:
         with:
           name: all-reports-java-${{ matrix.java }}-${{ matrix.os }}
           path: build/reports
-
-      - name: Setup Python
-        if: always()
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Running Python Script Tests
-        if: always()
-        run: |
-          cd .github/scripts/tests
-          python3 -m unittest discover
-        shell: bash
 
   detekt:
     runs-on: ${{ matrix.os }}

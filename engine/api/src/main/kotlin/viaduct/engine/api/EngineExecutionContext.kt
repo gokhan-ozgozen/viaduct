@@ -85,15 +85,6 @@ interface EngineExecutionContext {
          * - Child plan execution: The resolved child plan variables
          */
         val variables: Map<String, Any?>
-
-        /**
-         * The policy governing how fields within this scope should be resolved.
-         *
-         * This is determined by the result of the parent field's execution.
-         * - [ResolutionPolicy.STANDARD]: Normal execution (lookup resolvers).
-         * - [ResolutionPolicy.PARENT_MANAGED]: Driven by [ParentManagedValue], skipping resolvers.
-         */
-        val resolutionPolicy: ResolutionPolicy
     }
 
     /**

@@ -3,9 +3,6 @@ package viaduct.tenant.runtime.execution
 import javax.inject.Provider
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.ensureActive
 import viaduct.api.FieldValue
 import viaduct.api.ViaductFrameworkException
 import viaduct.api.ViaductTenantResolverException
@@ -56,7 +53,7 @@ class NodeBatchResolverExecutorImpl(
         return selectors.zip(results.map { unwrap(it) }).toMap()
     }
 
-    private suspend fun unwrap(fieldValue: Any?): Result<EngineObjectData> {
+    private fun unwrap(fieldValue: Any?): Result<EngineObjectData> {
         if (fieldValue !is FieldValue<*>) {
             throw IllegalStateException("Unexpected result type that is not a FieldValue: $fieldValue")
         }
@@ -65,7 +62,6 @@ class NodeBatchResolverExecutorImpl(
             val result = fieldValue.get()
             return Result.success(NodeUnbatchedResolverExecutorImpl.unwrapNodeResolverResult(result))
         } catch (e: Exception) {
-            if (e is CancellationException) currentCoroutineContext().ensureActive()
             if (e is ViaductFrameworkException) return Result.failure(e)
             return Result.failure(ViaductTenantResolverException(e, typeName))
         }

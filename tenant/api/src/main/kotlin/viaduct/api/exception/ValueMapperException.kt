@@ -6,4 +6,4 @@ package viaduct.api.exception
  * @param message the detail message for this exception
  */
 @Suppress("unused")
-class ValueMapperException(message: String, cause: Throwable? = null) : Exception(message, cause)
+class ValueMapperException(message: String) : Exception(message)

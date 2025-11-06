@@ -1,6 +1,5 @@
 package com.example.starwars.modules.filmography.characters.mutations
 
-import com.example.starwars.common.SecurityAccessContext
 import com.example.starwars.filmography.resolverbases.MutationResolvers
 import com.example.starwars.modules.filmography.characters.models.CharacterFilmsRepository
 import com.example.starwars.modules.filmography.characters.models.CharacterRepository
@@ -20,22 +19,20 @@ class DeleteCharacterMutation
     constructor(
         private val characterRepository: CharacterRepository,
         private val characterFilmsRepository: CharacterFilmsRepository,
-        private val filmCharactersRepository: FilmCharactersRepository,
-        private val securityAccessService: SecurityAccessContext
+        private val filmCharactersRepository: FilmCharactersRepository
     ) : MutationResolvers.DeleteCharacter() {
-        override suspend fun resolve(ctx: Context): Boolean? =
-            securityAccessService.validateAccess {
-                val id = ctx.arguments.id
+        override suspend fun resolve(ctx: Context): Boolean? {
+            val id = ctx.arguments.id
 
-                // Delete character, returns false if character not found
-                if (!characterRepository.delete(id.internalID)) {
-                    throw IllegalArgumentException("Character with ID ${id.internalID} not found")
-                }
-
-                // If the deletion was successful, remove character from all films
-                filmCharactersRepository.removeCharacter(id.internalID)
-                characterFilmsRepository.removeCharacter(id.internalID)
-
-                true
+            // Delete character, returns false if character not found
+            if (!characterRepository.delete(id.internalID)) {
+                throw IllegalArgumentException("Character with ID ${id.internalID} not found")
             }
+
+            // If the deletion was successful, remove character from all films
+            filmCharactersRepository.removeCharacter(id.internalID)
+            characterFilmsRepository.removeCharacter(id.internalID)
+
+            return true
+        }
     }

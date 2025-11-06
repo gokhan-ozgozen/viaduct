@@ -13,7 +13,6 @@ class CheckerDispatcherImpl(
     private val executor: CheckerExecutor
 ) : CheckerDispatcher {
     override val requiredSelectionSets = executor.requiredSelectionSets
-    override val checkerMetadata = executor.checkerMetadata
 
     override suspend fun execute(
         arguments: Map<String, Any?>,

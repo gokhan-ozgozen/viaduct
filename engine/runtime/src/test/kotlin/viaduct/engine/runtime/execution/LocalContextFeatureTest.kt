@@ -8,11 +8,11 @@ import org.junit.jupiter.api.Test
 import strikt.api.expectThat
 import strikt.assertions.any
 import strikt.assertions.contains
+import viaduct.engine.runtime.CompositeLocalContext
 import viaduct.engine.runtime.EngineResultLocalContext
-import viaduct.engine.runtime.context.CompositeLocalContext
-import viaduct.engine.runtime.context.getLocalContextForType
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.executeViaductModernGraphQL
 import viaduct.engine.runtime.execution.ExecutionTestHelpers.runExecutionTest
+import viaduct.engine.runtime.getLocalContextForType
 
 @ExperimentalCoroutinesApi
 class LocalContextFeatureTest {

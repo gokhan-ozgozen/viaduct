@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>Resolver</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script>var pathToRoot = "../../../";</script>
+    <script>document.documentElement.classList.replace("no-js","js");</script>
+    <script>const storage = localStorage.getItem("dokka-dark-mode")
+    if (storage == null) {
+        const osDarkSchemePreferred = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (osDarkSchemePreferred === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    } else {
+        const savedDarkMode = JSON.parse(storage)
+        if(savedDarkMode === true) {
+            document.getElementsByTagName("html")[0].classList.add("theme-dark")
+        }
+    }
+    </script>
+<script type="text/javascript" src="https://unpkg.com/kotlin-playground@1/dist/playground.min.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/sourceset_dependencies.js" async="async"></script>
+<link href="../../../styles/style.css" rel="Stylesheet">
+<link href="../../../styles/main.css" rel="Stylesheet">
+<link href="../../../styles/prism.css" rel="Stylesheet">
+<link href="../../../styles/logo-styles.css" rel="Stylesheet">
+<link href="../../../styles/font-jb-sans-auto.css" rel="Stylesheet">
+<link href="../../../ui-kit/ui-kit.min.css" rel="Stylesheet">
+<script type="text/javascript" src="../../../scripts/clipboard.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+<script type="text/javascript" src="../../../scripts/main.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/prism.js" async="async"></script>
+<script type="text/javascript" src="../../../ui-kit/ui-kit.min.js" defer="defer"></script>
+<script type="text/javascript" src="../../../scripts/symbol-parameters-wrapper_deferred.js" defer="defer"></script>
+<link href="../../../images/logo-only-white.svg">
+<link href="../../../styles/kdoc-styles.css" rel="Stylesheet">
+</head>
+<body>
+    <div class="root">
+    <nav class="navigation theme-dark" id="navigation-wrapper">
+            <a class="library-name--link" href="../../../index.html">
+                    tenant-api
+            </a>
+        <button class="navigation-controls--btn navigation-controls--btn_toc ui-kit_mobile-only" id="toc-toggle"
+                type="button">Toggle table of contents
+        </button>
+        <div class="navigation-controls--break ui-kit_mobile-only"></div>
+        <div class="library-version" id="library-version">
+0.2.3-skevy-1-SNAPSHOT        </div>
+        <div class="navigation-controls">
+        <div class="filter-section filter-section_loading" id="filter-section">
+                <button class="platform-tag platform-selector jvm-like" data-active=""
+                        data-filter=":tenant:tenant-api/main">jvm</button>
+            <div class="dropdown filter-section--dropdown" data-role="dropdown" id="filter-section-dropdown">
+                <button class="button button_dropdown filter-section--dropdown-toggle" role="combobox"
+                        data-role="dropdown-toggle"
+                        aria-controls="platform-tags-listbox"
+                        aria-haspopup="listbox"
+                        aria-expanded="false"
+                        aria-label="Toggle source sets"
+                ></button>
+                <ul role="listbox" id="platform-tags-listbox" class="dropdown--list" data-role="dropdown-listbox">
+                    <div class="dropdown--header"><span>Platform filter</span>
+                        <button class="button" data-role="dropdown-toggle" aria-label="Close platform filter">
+                            <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                        </button>
+                    </div>
+                        <li role="option" class="dropdown--option platform-selector-option jvm-like" tabindex="0">
+                            <label class="checkbox">
+                                <input type="checkbox" class="checkbox--input" id=":tenant:tenant-api/main"
+                                       data-filter=":tenant:tenant-api/main"/>
+                                <span class="checkbox--icon"></span>
+                                jvm
+                            </label>
+                        </li>
+                </ul>
+                <div class="dropdown--overlay"></div>
+            </div>
+        </div>
+                <a class="navigation-controls--btn navigation-controls--btn_homepage" id="homepage-link"
+                   href="https://airbnb.io/viaduct"></a>
+            <button class="navigation-controls--btn navigation-controls--btn_theme" id="theme-toggle-button"
+                    type="button">Switch theme
+            </button>
+            <div class="navigation-controls--btn navigation-controls--btn_search" id="searchBar" role="button">Search in
+                API
+            </div>
+        </div>
+    </nav>
+        <div id="container">
+            <div class="sidebar" id="leftColumn">
+                <div class="dropdown theme-dark_mobile" data-role="dropdown" id="toc-dropdown">
+                    <ul role="listbox" id="toc-listbox" class="dropdown--list dropdown--list_toc-list"
+                        data-role="dropdown-listbox">
+                        <div class="dropdown--header">
+                            <span>
+                                    tenant-api
+                            </span>
+                            <button class="button" data-role="dropdown-toggle" aria-label="Close table of contents">
+                                <i class="ui-kit-icon ui-kit-icon_cross"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar--inner" id="sideMenu"></div>
+                    </ul>
+                    <div class="dropdown--overlay"></div>
+                </div>
+            </div>
+            <div id="main">
+<div class="main-content" data-page-type="classlike" id="content" pageIds="tenant-api::viaduct.api/Resolver///PointingToDeclaration//-1049674059">
+  <div class="breadcrumbs"><a href="../../../index.html">tenant-api</a><span class="delimiter">/</span><a href="../index.html">viaduct.api</a><span class="delimiter">/</span><span class="current">Resolver</span></div>
+  <div class="cover ">
+    <h1 class="cover"><span><span>Resolver</span></span></h1>
+    <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":tenant:tenant-api/main"><div class="symbol monospace"><div class="block"><div class="block"><span class="token annotation builtin">@</span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.annotation/-target/index.html"><span class="token annotation builtin">Target</span></a><span class="token punctuation">(</span><span>allowedTargets<span class="token operator"> = </span><span class="token punctuation">[</span><span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.annotation/-annotation-target/-c-l-a-s-s/index.html">AnnotationTarget.CLASS</a></span><wbr></wbr><span class="token punctuation">]</span></span><wbr></wbr><span class="token punctuation">)</span></div></div><span class="token keyword">annotation class </span><a href="index.html">Resolver</a><span class="token punctuation">(</span><span class="parameters "><span class="parameter "><span class="token keyword">val </span>objectValueFragment<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">&quot;&quot;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>queryValueFragment<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a><span class="token operator"> = </span><span class="token string">&quot;&quot;</span><span class="token punctuation">, </span></span><span class="parameter "><span class="token keyword">val </span>variables<span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-array/index.html">Array</a><span class="token operator">&lt;</span><a href="../-variable/index.html">Variable</a><span class="token operator">&gt;</span><span class="token operator"> = </span>[]</span></span><span class="token punctuation">)</span><span class="clearfix"><span class="floating-right">(<a href="https://github.com/airbnb/viaduct/tree/v0.2.3-skevy-1-SNAPSHOT/tenant/api/src/main/kotlin/viaduct/api/Annotations.kt#L101">source</a>)</span></span></div><p class="paragraph">Annotation to mark a class as a resolver for a field or object in a GraphQL schema which requires custom resolution logic rather than simple property access.</p><p class="paragraph">Applied to fields that need runtime computation, database lookups, or complex business logic.</p><p class="paragraph">The @resolver directive supports two types of fragment syntax for efficient field resolution:</p><h4 class="">1. Shorthand Fragment Syntax</h4><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">@Resolver(&quot;fieldName&quot;)<br>class MyFieldResolver {<br>  override suspend fun resolve(ctx: Context): String {<br>    // Automatically delegates to the specified field<br>    return ctx.objectValue.getFieldName()<br>  }<br>}</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph"><strong>Use cases</strong>:</p><ul><li><p class="paragraph">Creating field aliases</p></li><li><p class="paragraph">Simple field transformations</p></li><li><p class="paragraph">Computed fields based on single existing fields</p></li></ul><h4 class="">2. Full Fragment Syntax</h4><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">@Resolver(<br>  &quot;&quot;&quot;<br>    fragment _ on MyType {<br>        field1<br>        field2<br>        field3<br>    }<br>    &quot;&quot;&quot;<br>)<br>class MyComputedFieldResolver {<br>  override suspend fun resolve(ctx: Context): String {<br>    val obj = ctx.objectValue<br>    // Can access all specified fields<br>    return &quot;${obj.getField1()} - ${obj.getField2()} (${obj.getField3()})&quot;<br>  }<br>}</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph"><strong>Use cases</strong>:</p><ul><li><p class="paragraph">Computed fields requiring multiple source fields</p></li><li><p class="paragraph">Performance optimization by specifying exact field requirements</p></li><li><p class="paragraph">Complex business logic combining multiple attributes</p></li></ul><h4 class="">3. Batch Resolver Fragment Syntax</h4><div class="sample-container"><pre><code class="block lang-kotlin" theme="idea">@Resolver(objectValueFragment = &quot;fragment _ on Character { id name }&quot;)<br>class CharacterBatchResolver : CharacterResolvers.SomeField() {<br>  override suspend fun batchResolve(contexts: List&lt;Context&gt;): List&lt;FieldValue&lt;String&gt;&gt; {<br>    // Process multiple contexts efficiently in one batch<br>    return contexts.map { ctx -&gt;<br>      val character = ctx.objectValue<br>      FieldValue.ofValue(&quot;${character.getName()} processed in batch&quot;)<br>    }<br>  }<br>}</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div><p class="paragraph"><strong>Use cases</strong>:</p><ul><li><p class="paragraph">Preventing N+1 query problems</p></li><li><p class="paragraph">Efficient batch processing of multiple field requests</p></li><li><p class="paragraph">Performance optimization for list queries</p></li></ul><p class="paragraph"><strong>Example</strong>:</p><div class="sample-container"><pre><code class="block lang-graphql" theme="idea">type Character {<br>  name: String @resolver<br>  homeworld: Planet @resolver      # Standard resolver (or batch resolver)<br>  displayName: String @resolver    # Shorthand fragment: @Resolver(&quot;name&quot;)<br>  summary: String @resolver        # Full fragment: @Resolver(&quot;fragment _ on Character { name birthYear }&quot;)<br>  filmCount: Int @resolver         # Batch resolver for efficient counting<br>  richSummary: String @resolver    # Batch resolver with complex logic<br>}</code></pre><span class="top-right-position"><span class="copy-icon"></span><div class="copy-popup-wrapper popup-to-left"><span class="copy-popup-icon"></span><span>Content copied to clipboard</span></div></span></div></div></div>
+  </div>
+  <div class="tabbedcontent">
+    <div class="tabs-section" tabs-section="tabs-section"><button class="section-tab" data-active="" data-togglable="CONSTRUCTOR,TYPE,PROPERTY,FUNCTION">Members</button></div>
+    <div class="tabs-section-body">
+      <div data-togglable="PROPERTY">
+        <h2 class="">Properties</h2>
+        <div class="table"><a data-name="-1572254063%2FProperties%2F-1049674059" anchor-label="objectValueFragment" id="-1572254063%2FProperties%2F-1049674059" data-filterable-set=":tenant:tenant-api/main"></a>
+          <div class="table-row" data-filterable-current=":tenant:tenant-api/main" data-filterable-set=":tenant:tenant-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="object-value-fragment.html"><span>object</span><wbr></wbr><span>Value</span><wbr></wbr><span><span>Fragment</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="-1572254063%2FProperties%2F-1049674059"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":tenant:tenant-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="object-value-fragment.html">objectValueFragment</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">This property is a GraphQL fragment that describes the selection set that must be fetched from the object type that contains the field being resolved. This fragment may include arguments to fields, which will be passed to the data fetchers of those fields.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="224663982%2FProperties%2F-1049674059" anchor-label="queryValueFragment" id="224663982%2FProperties%2F-1049674059" data-filterable-set=":tenant:tenant-api/main"></a>
+          <div class="table-row" data-filterable-current=":tenant:tenant-api/main" data-filterable-set=":tenant:tenant-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="query-value-fragment.html"><span>query</span><wbr></wbr><span>Value</span><wbr></wbr><span><span>Fragment</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="224663982%2FProperties%2F-1049674059"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":tenant:tenant-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="query-value-fragment.html">queryValueFragment</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-string/index.html">String</a></div><div class="brief "><p class="paragraph">This property is a GraphQL fragment that describes the selection set that must be fetched from the root query type. This fragment may include arguments to fields, which will be passed to the data fetchers of those fields.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+<a data-name="2018897948%2FProperties%2F-1049674059" anchor-label="variables" id="2018897948%2FProperties%2F-1049674059" data-filterable-set=":tenant:tenant-api/main"></a>
+          <div class="table-row" data-filterable-current=":tenant:tenant-api/main" data-filterable-set=":tenant:tenant-api/main">
+            <div class="main-subrow keyValue ">
+              <div class=""><span class="inline-flex">
+                  <div><a href="variables.html"><span><span>variables</span></span></a></div>
+<span class="anchor-wrapper"><span class="anchor-icon" pointing-to="2018897948%2FProperties%2F-1049674059"></span>
+                    <div class="copy-popup-wrapper "><span class="copy-popup-icon"></span><span>Link copied to clipboard</span></div>
+                  </span></span></div>
+              <div>
+                <div class="title">
+                  <div class="platform-hinted " data-platform-hinted="data-platform-hinted"><div class="content sourceset-dependent-content" data-active="" data-togglable=":tenant:tenant-api/main"><div class="symbol monospace"><span class="token keyword">val </span><a href="variables.html">variables</a><span class="token operator">: </span><a href="https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/-array/index.html">Array</a><span class="token operator">&lt;</span><a href="../-variable/index.html">Variable</a><span class="token operator">&gt;</span></div><div class="brief "><p class="paragraph">This property is an array of <a href="../-variable/index.html">Variable</a> annotations that describe how to extract values from the <span data-unresolved-link="graphql.schema/DataFetchingEnvironment///PointingToDeclaration/">graphql.schema.DataFetchingEnvironment</span> and bind them to variables used in the fragments.</p></div></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    <div class="footer">
+        <a href="#content" id="go-to-top-link" class="footer--button footer--button_go-to-top"></a>
+        <span>&copy; 2025 Airbnb, Inc.</span>
+        <span class="pull-right">
+            <span>Generated by </span>
+            <a class="footer--link footer--link_external" href="https://github.com/Kotlin/dokka">
+                <span>dokka</span>
+            </a>
+        </span>
+    </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

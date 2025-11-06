@@ -25,7 +25,7 @@ dokka {
     val repoRootProject = repoRoot()
 
     pluginsConfiguration.html {
-        homepageLink = "https://viaduct.airbnb.tech"
+        homepageLink = "https://airbnb.io/viaduct"
         customStyleSheets.from(repoRootProject.file("docs/kdoc-styles.css"))
         customAssets.from(repoRootProject.file("docs/assets/icons/logo-only-white.svg"))
         footerMessage = "&copy; 2025 Airbnb, Inc."

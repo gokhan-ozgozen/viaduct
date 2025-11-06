@@ -1,9 +1,7 @@
-@file:Suppress("ForbiddenImport")
-
 package viaduct.engine.api.instrumentation.resolver
 
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runBlockingTest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import viaduct.engine.api.ResolverMetadata
@@ -20,7 +18,7 @@ class ViaductResolverInstrumentationTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `DEFAULT instrumentation executes resolver function`() =
-        runBlocking {
+        runBlockingTest {
             val expectedResult = "test result"
             val result = ViaductResolverInstrumentation.DEFAULT.instrumentResolverExecution(
                 ResolverFunction { expectedResult },
@@ -35,7 +33,7 @@ class ViaductResolverInstrumentationTest {
     @Test
     @ExperimentalCoroutinesApi
     fun `DEFAULT instrumentation executes fetch function`() =
-        runBlocking {
+        runBlockingTest {
             val expectedResult = "test field value"
             val result = ViaductResolverInstrumentation.DEFAULT.instrumentFetchSelection(
                 FetchFunction { expectedResult },

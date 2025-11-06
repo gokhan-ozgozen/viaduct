@@ -9,7 +9,8 @@ Administration is handled by Airbnb's open source committee.
 
 ### CI
 
-We use Github Actions to run Viaduct's public [CI jobs](https://github.com/airbnb/viaduct/actions).
+We use Github Actions to run Viaduct's public [CI
+jobs](https://github.com/airbnb/viaduct/actions).
 
 ## Gradle Plugin Portal
 
@@ -31,264 +32,36 @@ and is not accessible to outside contributors.
 
 ## How To
 
-### Prerequisites for Release Managers
-
-Before performing your first release, ensure you have the following setup:
-
-#### Required Tools
-
-1. **GitHub CLI (`gh`)**
-   ```bash
-   # macOS
-   brew install gh
-   
-   # Verify installation
-   gh --version
-   ```
-
-2. **Python 3**
-   ```bash
-   # Should be pre-installed on macOS
-   python3 --version  # Should show 3.x
-   ```
-
-#### Initial Setup (One-time)
-
-1. **Authenticate GitHub CLI:**
-   ```bash
-   gh auth login
-   ```
-   - Select: `GitHub.com`
-   - Select: `HTTPS`
-   - Authenticate via browser when prompted
-
-2. **Verify SSH access to GitHub:**
-   ```bash
-   ssh -T git@github.com
-   ```
-   Expected output: `Hi <username>! You've successfully authenticated`
-
-   If this fails:
-   - Ensure you have SSH keys set up: https://docs.github.com/en/authentication/connecting-to-github-with-ssh
-   - Add your key to ssh-agent: `ssh-add ~/.ssh/id_rsa`
-
-3. **Clone public Viaduct repository:**
-   ```bash
-   # Clone to a separate directory (not inside Treehouse)
-   git clone git@github.com:airbnb/viaduct.git ~/repos/viaduct-public
-   cd ~/repos/viaduct-public
-   ```
-
-4. **[Optional] Set default repository:**
-
-   This makes `gh` commands default to `airbnb/viaduct` so you don't need to specify `--repo` every time.
-
-   ```bash
-   # Run from within the cloned directory
-   cd ~/repos/viaduct-public
-   gh repo set-default airbnb/viaduct
-   # When prompted, select: airbnb/viaduct
-   ```
-
-   **Why this is useful:** When you run commands like `gh workflow run` or `gh release list`, they'll automatically use `airbnb/viaduct` instead of requiring `--repo airbnb/viaduct` every time.
-
-#### Required Access
-
-Verify you have access to:
-- [ ] Airbnb GitHub organization (check: https://github.com/orgs/airbnb/people)
-- [ ] Gradle Plugin Portal `viaduct-maintainers` account (check: https://plugins.gradle.org/u/viaduct-maintainers)
-- [ ] 1Password vault with `viaductbot` credentials (for Sonatype)
-
-If you're missing any access, contact your team lead before release day.
-
-### Understanding Viaduct Versioning
-
-Before starting the release process, understand how Viaduct manages versions:
-
-#### The VERSION File
-
-In the root directory of the Viaduct repository is a file called `VERSION`:
-
-- **On main branch:** Always contains a `-SNAPSHOT` version (e.g., `0.7.0-SNAPSHOT`)
-- **On release branches:** Contains the actual release version (e.g., `0.7.0`)
-
-**Example flow:**
-1. Main branch has: `0.7.0-SNAPSHOT`
-2. During release week:
-   - Main is bumped to: `0.8.0-SNAPSHOT`
-   - Release branch `release/v0.7.0` is created with VERSION: `0.7.0`
-
-#### Demo App Versions
-
-Demo applications have `gradle.properties` files with a `viaductVersion` property. This property **must always match** the root `VERSION` file.
-
-**Syncing versions:**
-```bash
-./gradlew syncDemoAppVersions
-```
-This Gradle task updates all demo app `gradle.properties` files to match the `VERSION` file.
-
-#### Repository Context
-
-Different steps in the release process happen in different places:
-
-| Step | Location | Example |
-|------|----------|---------|
-| Version bump PRs | **Your personal fork** | Fork → PR to main |
-| Release branch creation | **Public `airbnb/viaduct` repo** | Direct push to public repo |
-| Inbound PRs | Via Treehouse (Copybara) | See "Inbound Pull Request Process" |
-
-**Important:** The public `airbnb/viaduct` repository is a mirror of Treehouse. Most work should happen in forks, but release branches are an exception where we work directly in the public repo.
-
 ### Publishing a new release
 
 Viaduct follows a weekly release cadence.
 
 1. During Monday's Viaduct team meeting, we will pick the release manager for the week.
 2. Prior to the Wednesday Viaduct team meeting, the release manager creates a branch in Github called
-   `candidate/v0.(X+1).0` where `X` is the version being released. The release manager opens a pull request against the main branch, bumping `VERSION` from `0.X.0-SNAPSHOT` to `0.(X+1).0-SNAPSHOT` and updates all the demo app `gradle.properties` files to match.
-3. Once this PR is approved and merged, the release manager creates a branch off the SHA just before this version bump. This is the week's release candidate branch. This branch is called `release/vX.Y.Z`
+`candidate/v0.(X+1).0` where `X` is the version being released. The release manager opens a pull request
+against the main branch, bumping `VERSION` from `0.X.0-SNAPSHOT` to `0.(X+1).0-SNAPSHOT` and updates all the
+demo app `gradle.properties` files to match.
+3. Once this PR is approved and merged, the release manager creates a branch off the SHA just before this version bump.
+This is the week's release candidate branch. This branch is called `release/vX.Y.Z`
 4. The release manager triggers comprehensive testing across all supported environments by running:
 
-   ```shell
-   gh workflow run ".github/workflows/trigger-all-builds.yml" \
-   --ref release/vX.Y.Z \
-   -f reason="Testing release candidate v0.X.0"
-   ```
+    ```shell
+    gh workflow run ".github/workflows/trigger-all-builds.yml" \
+    --ref release/vX.Y.Z \
+    -f reason="Testing release candidate v0.X.0"
+    ```
 
-   This will trigger builds on all supported combinations:
-   - OS: ubuntu-latest, macos-latest, macos-15-intel
-   - Java: 11, 17, 21
+    This will trigger builds on all supported combinations:
+    - OS: ubuntu-latest, macos-latest, macos-15-intel
+    - Java: 11, 17, 21
 
-   Monitor the triggered builds and verify all 9 combinations pass successfully before the Wednesday meeting.
+    Monitor the triggered builds and verify all 9 combinations pass successfully before the Wednesday meeting.
 
-5. **[Optional but Recommended] Validate using Maven Local Cache:**
-
-   This step lets you test the release locally before publishing to ensure everything builds correctly.
-
-   a. **Clean your local Maven cache:**
-   ```bash
-   # Remove existing Viaduct artifacts to ensure fresh build
-   rm -rf ~/.m2/repository/com/airbnb/viaduct
-   ```
-
-   b. **Publish to Maven local:**
-   ```bash
-   cd ~/repos/viaduct-public    # Or wherever your public viaduct clone is
-   git checkout release/v0.X.0  # Your release branch
-   ./gradlew publishToMavenLocal
-   ```
-
-   This puts the build artifacts in `~/.m2/repository/`
-
-   c. **Configure demo apps to use Maven local:**
-   ```bash
-   # Update all demo app settings.gradle.kts to check mavenLocal() first
-   for i in demoapps/*/settings.gradle.kts; do
-     # Backup first
-     cp "$i" "$i.backup"
-   
-     # Add mavenLocal() to repositories
-     sed -i '' 's/^\([ ]*\)repositories {/\1repositories { mavenLocal()/g' "$i"
-   done
-   ```
-
-   Note: This sed command adds `mavenLocal()` after `repositories {`. The formatting won't be perfect (no newline), but it works.
-
-   d. **Test each demo app:**
-   ```bash
-   # Test starwars
-   cd demoapps/starwars
-   ./gradlew clean test --scan
-   
-   # Test cli-starter
-   cd ../cli-starter
-   ./gradlew clean test --scan
-   
-   # Test ktor-starter
-   cd ../ktor-starter
-   ./gradlew clean test --scan
-   
-   # Test jetty-starter
-   cd ../jetty-starter
-   ./gradlew clean test --scan
-   ```
-
-   The `--scan` flag generates a build scan URL. Open it and verify dependencies are being pulled from `~/.m2/repository` (local) and not from remote repositories.
-
-   e. **Restore demo app settings:**
-   ```bash
-   # Restore backups (don't commit the mavenLocal changes)
-   for i in demoapps/*/settings.gradle.kts.backup; do
-     mv "$i" "${i%.backup}"
-   done
-   ```
-
-   **Why this step is valuable:**
-   - Catches build issues before artifacts are published publicly
-   - Validates that demo apps work with the new version
-   - Faster than waiting for Maven Central sync
-   - Can be done while GitHub Actions are running
-
-   **Troubleshooting:**
-   - **Build fails with signing error:** This should not happen after the signing fix. If it does, ensure you're using the updated tools/build.gradle.kts
-   - **Dependencies not from local:** Check build scan, ensure `mavenLocal()` was added correctly
-   - **Tests fail:** Investigate if it's a real issue or environmental problem
-
-6. **Generate and Share Changelog (Before Wednesday Meeting):**
-
-   Prior to the Wednesday team meeting, the release manager should generate and review the changelog.
-
-   a. **Generate changelog:**
-   ```bash
-   cd ~/repos/viaduct-public    # Or wherever your public viaduct clone is
-   git checkout release/v0.X.0  # Your release branch
-   
-   # Generate changelog from previous release to current HEAD
-   ./.github/scripts/generate_changelog.py origin/release/v0.(X-1).0 HEAD
-   ```
-
-   **Example:** If releasing `0.7.0` and previous release was `0.6.0`:
-   ```bash
-   git checkout release/v0.7.0
-   ./.github/scripts/generate_changelog.py origin/release/v0.6.0 HEAD
-   ```
-
-   b. **Clean up the output:**
-
-   The generated changelog may include:
-   - Bookkeeping commits at the start (e.g., "Bump version to X.Y.Z-SNAPSHOT")
-   - Bookkeeping commits at the end (e.g., "Set version to X.Y.Z")
-   - Unclear or overly technical commit messages
-
-   Edit the changelog to:
-   - Remove version bump commits
-   - Clarify cryptic commit messages
-   - Group related changes if helpful
-   - Ensure it's understandable to users, not just developers
-
-   c. **Save the changelog:**
-   ```bash
-   # Save to a file for later use
-   ./.github/scripts/generate_changelog.py origin/release/v0.6.0 HEAD > /tmp/release-v0.7.0-changelog.md
-   
-   # Edit with your preferred editor
-   code /tmp/release-v0.7.0-changelog.md  # or vim, nano, etc.
-   ```
-
-   d. **Share with team:**
-   - Post the edited changelog in the Viaduct OSS Slack channel
-   - Ask for feedback: "Proposed changelog for v0.7.0 release. Please review before Wednesday meeting."
-   - Note any concerns or suggested edits
-
-   e. **Keep the file handy:**
-   You'll paste this into the GitHub release page in Step 14.
-
-   f. **At the Wednesday OSS team meeting,** present the changelog and lead a discussion to reach approval on the week's release.
-7. If the team agrees on releasing the proposed change set, the release manager proceeds with the release.
-   - If necessary based on team discussion, the release manager may wait for an in-flight change to land and will cherry-pick the change into the release branch once it is merged into the main branch.
-8. In the release candidate branch, the release manager bumps the `VERSION` file to the desired release version and updates the demo app gradle.properties files to match the version file.
-9. The release manager manually invokes a Github Action that uses `HEAD` of the release candidate branch via
+5. At the Wednesday OSS team meeting, the release manager presents a proposed changelog for the release candidate branch and leads a discussion to reach approval on the week's release.
+6. If the team agrees on releasing the proposed change set, the release manager proceeds with the release.
+    - If necessary based on team discussion, the release manager may wait for an in-flight change to land and will cherry-pick the change into the release branch once it is merged into the main branch.
+7. In the release candidate branch, the release manager bumps the `VERSION` file to the desired release version and updates the demo app gradle.properties files to match the version file.
+8. The release manager manually invokes a Github Action that uses `HEAD` of the release candidate branch via
 
 ```
 gh workflow run ".github/workflows/release.yml" \
@@ -305,11 +78,11 @@ Update parameters as needed. This workflow will:
   - Pushes a `vX.Y.Z` tag to Github.
   - Create a draft Github release with changelog.
 
-10. Verify that deployments to Sonatype are successfully validated. Log in as `viaductbot` (credentials in shared 1Password vault).
-11. Release manager reviews draft Github release and artifacts published to Sonatype and Gradle. This includes reviewing the changelog.
+9. Verify that deployments to Sonatype are successfully validated. Log in as `viaductbot` (credentials in shared 1Password vault).
+10. Release manager reviews draft Github release and artifacts published to Sonatype and Gradle. This includes reviewing the changelog.
     - If the release manager rejects the release, start over with an incremented patch version. Once artifacts are published, they may not be changed.
-12. If the release manager is satisfied, manually publish the Sonatype deployments. Make sure to publish all three deployments. Publishing takes 5-10 minutes.
-13. Release manager must verify standalone demo apps against the newly published versions of artifacts in Maven Central and Gradle Plugin Portal.
+11. If the release manager is satisfied, manually publish the Sonatype deployments. Make sure to publish all three deployments. Publishing takes 5-10 minutes.
+12. Release manager must verify standalone demo apps against the newly published versions of artifacts in Maven Central and Gradle Plugin Portal.
       - Demo apps are published only on **release branches** (format: `release/v[major].[minor].[patch]`)
       - Each demo app must build successfully and have a `viaductVersion` that matches the release version
       - **Publishing with GitHub Actions (Recommended)**:
@@ -356,47 +129,7 @@ Update parameters as needed. This workflow will:
         - **Authentication errors**: Verify GitHub secrets are configured (`VIADUCT_GRAPHQL_GITHUB_ACCESS_TOKEN`)
         - **SSH authentication**: Ensure keys are in GitHub and agent is running (`ssh-add ~/.ssh/id_rsa`)
 
-14. **⚠️ IMPORTANT: Publish the GitHub Release**
-
-    **This step has been skipped in previous releases but is critical for user visibility.**
-
-    Once artifacts are published to Maven Central and Gradle Plugin Portal, and demo apps are verified, make the release official on GitHub.
-
-    a. **Navigate to releases page:**
-    ```bash
-    # Open in browser
-    open https://github.com/airbnb/viaduct/releases
-    # Or use gh CLI
-    gh release list --repo airbnb/viaduct
-    ```
-
-    b. **Find the draft release:**
-    - You should see a draft release for `v0.X.0` created by the GitHub Action in Step 9
-    - Click "Edit" on this draft
-
-    c. **Add the changelog:**
-    - If you generated a changelog in step 6, copy it
-    - Paste it into the description field of the release
-    - Preview the markdown to check formatting
-
-    d. **Publish the release:**
-    - Review one final time:
-      - [ ] Version tag is correct (e.g., `v0.7.0`)
-      - [ ] Target is the correct release branch
-      - [ ] Changelog is complete and well-formatted
-    - ✅ **Check the "Set as the latest release" box** (very important!)
-    - Click **"Publish release"**
-
-    e. **Verify publication:**
-    - Visit https://github.com/airbnb/viaduct/releases
-    - Confirm your release shows as "Latest"
-    - Share the release link in Slack: `https://github.com/airbnb/viaduct/releases/tag/v0.X.0`
-
-    **Why this matters:**
-    - GitHub releases page is often the first place users check for new versions
-    - "Latest" badge helps users quickly find the current version
-    - Changelog provides important migration information
-    - Links from external sites often point to the releases page
+13. Release manager manually publishes the Github release.
 
 ### Adding a New Demo App
 
